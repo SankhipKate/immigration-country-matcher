@@ -28,12 +28,13 @@ main{margin-top:24px;margin-bottom:70px;padding:0 18px}
 .section-title{font-size:20px;margin:0 0 15px}
 .note{background:var(--pale);border-radius:12px;padding:12px 14px;color:var(--navy);font-size:14px;line-height:1.45;margin-bottom:18px}
 .warning-note{background:#fff7e6;border:1px solid #f0d59d;border-radius:12px;padding:12px 14px;color:#775014;font-size:14px;line-height:1.45;margin:12px 0}
-.field{display:grid;gap:7px;margin:13px 0}
+.field{display:grid;gap:7px;margin:13px 0;align-content:start}
 label{font-size:14px;font-weight:750}
 .help{font-size:12px;line-height:1.45;color:var(--muted)}
 input,select{width:100%;border:1px solid #cbd7df;border-radius:10px;padding:11px 12px;background:#fff;color:var(--ink)}
+input:not([type=range]),select{height:44px;min-height:44px}
 input[type=range]{padding:0;accent-color:var(--blue)}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:11px;align-items:start}
 .weights{display:grid;gap:9px;margin-top:12px}
 .weight{display:grid;grid-template-columns:1fr 115px 24px;gap:8px;align-items:center;font-size:13px}
 .weight span:last-child{font-weight:800;text-align:right}
@@ -118,7 +119,7 @@ details p,details li{line-height:1.55;color:#50616e}
 <header><div class="wrap">
   <h1>Куда переехать?</h1>
   <p>Навигатор сравнивает доступность ВНЖ, ПМЖ или гражданства, расходы, семью, школы и качество жизни. Подробная карточка каждой исследованной страны открывается по клику.</p>
-  <span class="version">Версия 0.3 · данные вынесены отдельно</span>
+  <span class="version">Версия 0.4 · анкета и логика уточнены</span>
 </div></header>
 
 <main>
@@ -161,11 +162,6 @@ details p,details li{line-height:1.55;color:#50616e}
     <div class="help">Аренда, продукты, транспорт, медицина и бытовые расходы. Это не доход и не стоимость переезда.</div>
   </div>
 
-  <div class="field" id="schoolBudgetField">
-    <label for="schoolBudget">Максимум на школу, USD/год</label>
-    <input id="schoolBudget" type="number" value="0" min="0" step="500">
-  </div>
-
   <div class="two">
     <div class="field">
       <label for="statusGoal">Какой статус должен быть достижим</label>
@@ -185,8 +181,9 @@ details p,details li{line-height:1.55;color:#50616e}
 
   <div class="two">
     <div class="field">
-      <label for="language">Готовы учить местный язык для долгосрочного статуса</label>
-      <select id="language"><option>Только базовый уровень</option><option>Да</option><option>Нет</option></select>
+      <label for="language">Готовы сдавать экзамен по местному языку, если он обязателен для ПМЖ или гражданства</label>
+      <select id="language"><option>Да</option><option>Только базовый уровень</option><option>Нет</option></select>
+      <div class="help">Ответ влияет только на страны, где для выбранного долгосрочного статуса требуется подтверждение языка. Для обычного ВНЖ этот вопрос не снижает рейтинг.</div>
     </div>
     <div class="field">
       <label for="petType">Домашние животные</label>
@@ -215,7 +212,7 @@ details p,details li{line-height:1.55;color:#50616e}
     <summary>Что входит в расчёт</summary>
     <p>Сначала проверяются юридические и финансовые ограничения. Затем исследованные страны сравниваются по одинаковой шкале. Страны без завершённого исследования присутствуют в каталоге, но не получают вымышленные баллы.</p>
   </details>
-  <p class="footer-note">Версия 0.3. Рейтинг пока рассчитывается по 11 исследованным странам. В каталог добавлены все 249 стран и территорий ISO; остальные помечены как ожидающие исследования.</p>
+  <p class="footer-note">Версия 0.4. Рейтинг пока рассчитывается по 11 исследованным странам. В каталог добавлены все 249 стран и территорий ISO; остальные помечены как ожидающие исследования.</p>
 </section>
 </div>
 </main>
@@ -284,14 +281,20 @@ function timeScore(years){
   if(years<=1) return 100;if(years<=3) return 90;if(years<=5) return 78;
   if(years<=7) return 65;if(years<=10) return 50;if(years<=12) return 35;return 20;
 }
+function languageRequirement(c,goal){
+  if(goal==='ПМЖ обязательно') return Boolean(c.language_for_pr??c.local_language);
+  if(goal==='Гражданство обязательно') return Boolean(c.language_for_citizenship??c.local_language);
+  return false;
+}
 function statusScore(c){
   const goal=val('statusGoal');
   const residenceScore=c.residence_months<10||val('residence')==='Да'?100:val('residence')==='Зависит от страны'?70:40;
-  const languageScore=!c.local_language||val('language')==='Да'?100:val('language')==='Только базовый уровень'?65:35;
+  const languageRequired=languageRequirement(c,goal);
+  const languageScore=!languageRequired?100:val('language')==='Да'?100:val('language')==='Только базовый уровень'?65:25;
   if(goal==='ВНЖ достаточно') return c.route;
-  if(goal==='ПМЖ обязательно') return timeScore(c.pr_years)*.75+residenceScore*.25;
-  if(goal==='Гражданство обязательно') return timeScore(c.passport_years)*.6+residenceScore*.2+languageScore*.2;
-  return c.route*.35+timeScore(c.pr_years)*.3+timeScore(c.passport_years)*.2+residenceScore*.1+languageScore*.05;
+  if(goal==='ПМЖ обязательно') return timeScore(c.pr_years)*.6+residenceScore*.2+languageScore*.2;
+  if(goal==='Гражданство обязательно') return timeScore(c.passport_years)*.55+residenceScore*.2+languageScore*.25;
+  return c.route*.45+timeScore(c.pr_years)*.3+timeScore(c.passport_years)*.25;
 }
 function petScore(c){
   const pet=val('petType');
@@ -313,13 +316,13 @@ function scoreCountry(c){
   const sameSex=val('sameSex')==='Да';
   const familyVisa=val('familyVisa')==='Да';
   const school=val('school')==='Да';
-  const income=num('income'), budget=num('budget'), schoolBudget=num('schoolBudget');
+  const income=num('income'), budget=num('budget');
 
   const legal=c.route*.4+(sameSex?c.family_recognition:100)*.3+(familyVisa?c.family_visa:100)*.3;
   const incomeScore=neutralRatio(income,c.min_income);
   const budgetScore=neutralRatio(budget,c.budget_no_school);
   const finance=incomeScore*.55+budgetScore*.45;
-  const schoolScore=!school?100:c.school_availability*.45+(schoolBudget?cap(schoolBudget/c.school_min*100):70)*.55;
+  const schoolScore=!school?100:c.school_availability;
   const status=statusScore(c);
   const scores={
     family:legal,finance,status,school:schoolScore,safety:c.safety,climate:c.climate,
@@ -347,9 +350,8 @@ function scoreCountry(c){
   if(familyVisa&&c.family_visa<80) warn.push('семейный ВНЖ имеет ограничения');
   if(income>0&&c.min_income>0&&income<c.min_income*1.1) warn.push('доход близок к минимальному порогу');
   if(budget>0&&budget<c.budget_no_school) warn.push('расходы ниже комфортной оценки');
-  if(school&&schoolBudget>0&&schoolBudget<c.school_min) warn.push('школа дороже указанного лимита');
   if(val('residence')==='Нет'&&c.residence_months>=10) warn.push('для долгосрочного статуса нужно много времени проводить в стране');
-  if(val('language')==='Нет'&&c.local_language) warn.push('для долгосрочного статуса понадобится местный язык');
+  if(val('language')==='Нет'&&languageRequirement(c,val('statusGoal'))) warn.push('для выбранного долгосрочного статуса потребуется местный язык');
   if(val('citySize')!=='Неважно'&&!(c.city_sizes||[]).includes(val('citySize'))) warn.push('предпочитаемый размер города представлен ограниченно');
 
   const statusLabel=hard.length?'Не проходит':warn.length?'С оговорками':'Подходит';
