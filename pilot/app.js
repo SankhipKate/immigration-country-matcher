@@ -14,7 +14,7 @@ const nextButton = $('#nextStep');
 const prevButton = $('#prevStep');
 const steps = $$('.wizard-step');
 const TOTAL_STEPS = steps.length;
-const STORAGE_KEY = 'immigration-matcher-spain-draft-v06';
+const STORAGE_KEY = 'immigration-matcher-spain-draft-v07';
 const RESULT_KEY = 'immigration-matcher-spain-result-v06';
 let currentStep = 1;
 let spainData;
@@ -38,6 +38,8 @@ const setRadioValue = (name, value) => {
 };
 const get = (id) => $(`#${id}`).value;
 const checked = (id) => $(`#${id}`).checked;
+const numberValue = (id) => get(id) === '' ? null : Number(get(id));
+const specified = (value) => value !== null && value !== undefined && value !== '';
 
 const BASIS_LABELS = {
   REMOTE_EMPLOYEE: 'Удалённая работа по найму',
@@ -66,22 +68,22 @@ function readProfile() {
     applicationNationality: 'RU',
     plannedBasis: radioValue('plannedBasis'),
     currentLocation: get('currentLocation'),
-    legalResidence: get('legalResidence') === 'YES',
-    monthlyIncomeUsd: Number(get('monthlyIncomeUsd')),
-    eurUsdRate: Number(get('eurUsdRate')),
+    legalResidence: get('legalResidence') === '' ? null : get('legalResidence') === 'YES',
+    monthlyIncomeUsd: numberValue('monthlyIncomeUsd'),
+    eurUsdRate: numberValue('eurUsdRate'),
     bankCountry: get('bankCountry'),
     socialSecurityPlan: get('socialSecurityPlan'),
-    adults: Number(get('adults')),
-    children: Number(get('children')),
+    adults: numberValue('adults'),
+    children: numberValue('children'),
     relationshipType: get('relationshipType'),
     sameSexFamily: Number(get('adults')) > 1 && checked('sameSexFamily'),
     needsFamilyVisa: Number(get('adults')) > 1 && checked('needsFamilyVisa'),
     schoolNeeded: checked('schoolNeeded'),
     goal: radioValue('goal'),
-    monthsPerYear: Number(get('monthsPerYear')),
+    monthsPerYear: numberValue('monthsPerYear'),
     languageReadiness: radioValue('languageReadiness'),
     keepRuCitizenship: get('keepRuCitizenship'),
-    monthlyBudgetUsd: Number(get('monthlyBudgetUsd')),
+    monthlyBudgetUsd: numberValue('monthlyBudgetUsd'),
     citySize: get('citySize'),
     pet: get('pet'),
     dogBreed: get('dogBreed'),
@@ -90,25 +92,27 @@ function readProfile() {
 }
 
 function profileSummaryRows(profile, forResult = false) {
-  const family = `${profile.adults} ${profile.adults === 1 ? 'взрослый' : 'взрослых'}, ${profile.children} ${profile.children === 1 ? 'ребёнок' : 'детей'}`;
+  const family = specified(profile.adults) && specified(profile.children) ? `${profile.adults} ${profile.adults === 1 ? 'взрослый' : 'взрослых'}, ${profile.children} ${profile.children === 1 ? 'ребёнок' : 'детей'}` : 'Не указано';
+  const amount = (value) => specified(value) ? `${number(value)} USD/мес` : 'Не указано';
   const rows = [
-    ['⌘', 'Основание для ВНЖ', BASIS_LABELS[profile.plannedBasis]],
-    ['▣', forResult ? 'Доход после пересчёта' : 'Доход', forResult && lastCalculation?.bestRoute ? currency(lastCalculation.bestRoute.incomeEur, 'EUR') : `${number(profile.monthlyIncomeUsd)} USD/мес`],
+    ['⌘', 'Основание для ВНЖ', BASIS_LABELS[profile.plannedBasis] || 'Не указано'],
+    ['▣', forResult ? 'Доход после пересчёта' : 'Доход', forResult && lastCalculation?.bestRoute ? currency(lastCalculation.bestRoute.incomeEur, 'EUR') : amount(profile.monthlyIncomeUsd)],
     ['♙', 'Состав семьи', family],
-    ['◎', 'Цель', GOAL_LABELS[profile.goal]],
-    ['▤', 'Бюджет без школы', `${number(profile.monthlyBudgetUsd)} USD/мес`],
+    ['◎', 'Цель', GOAL_LABELS[profile.goal] || 'Не указано'],
+    ['▤', 'Бюджет без школы', amount(profile.monthlyBudgetUsd)],
   ];
   if (!forResult) rows.push(
-    ['⌖', 'Где вы сейчас', LOCATION_LABELS[profile.currentLocation]],
-    ['◇', 'Школа', profile.schoolNeeded ? 'Нужна' : 'Не нужна'],
-    ['♢', 'Животное', PET_LABELS[profile.pet]],
-    ['文', 'Испанский', LANGUAGE_LABELS[profile.languageReadiness]],
+    ['⌖', 'Где вы сейчас', LOCATION_LABELS[profile.currentLocation] || 'Не указано'],
+    ['◇', 'Школа', hasMeaningfulFormData() ? (profile.schoolNeeded ? 'Нужна' : 'Не нужна') : 'Не указано'],
+    ['♢', 'Животное', PET_LABELS[profile.pet] || 'Не указано'],
+    ['文', 'Испанский', LANGUAGE_LABELS[profile.languageReadiness] || 'Не указано'],
   );
   return rows;
 }
 
 function renderSummary(root, profile, forResult = false) {
-  root.innerHTML = profileSummaryRows(profile, forResult).map(([icon, label, value]) => `
+  const emptyMessage = !forResult && !hasMeaningfulFormData() ? '<p class="empty-profile-message">Профиль пока не заполнен</p>' : '';
+  root.innerHTML = emptyMessage + profileSummaryRows(profile, forResult).map(([icon, label, value]) => `
     <div class="summary-row"><span class="summary-icon" aria-hidden="true">${icon}</span><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>
   `).join('');
 }
@@ -117,6 +121,25 @@ function updateProfileSummary() {
   const profile = readProfile();
   renderSummary($('#profileSummary'), profile);
   if (currentStep === TOTAL_STEPS) renderReview(profile);
+}
+
+function hasMeaningfulFormData() {
+  return Boolean(radioValue('plannedBasis') || radioValue('goal') || radioValue('languageReadiness') ||
+    ['currentLocation','legalResidence','monthlyIncomeUsd','eurUsdRate','bankCountry','socialSecurityPlan','adults','children','relationshipType','monthsPerYear','keepRuCitizenship','monthlyBudgetUsd','citySize','pet','dogBreed'].some((id) => specified(get(id))) ||
+    ['sameSexFamily','needsFamilyVisa','schoolNeeded','medicineRequired'].some(checked));
+}
+
+function isFormComplete() {
+  const profile = readProfile();
+  return Boolean(profile.plannedBasis && profile.currentLocation && profile.legalResidence !== null &&
+    profile.monthlyIncomeUsd > 0 && profile.eurUsdRate > 0 && profile.bankCountry && profile.socialSecurityPlan &&
+    profile.adults >= 1 && profile.children >= 0 && profile.goal && specified(profile.monthsPerYear) &&
+    profile.languageReadiness && profile.keepRuCitizenship && profile.monthlyBudgetUsd > 0 && profile.citySize && profile.pet &&
+    (profile.adults < 2 || profile.relationshipType));
+}
+
+function updateActionAvailability() {
+  submitButton.disabled = !spainData || !isFormComplete();
 }
 
 function renderReview(profile) {
@@ -151,9 +174,11 @@ function showStep(step, shouldScroll = true) {
 
 function validateStep(step) {
   const errors = [];
-  if (step === 3 && Number(get('monthlyIncomeUsd')) <= 0) errors.push('Укажите подтверждаемый ежемесячный доход.');
-  if (step === 4 && Number(get('monthsPerYear')) < 0) errors.push('Проверьте число месяцев проживания.');
-  if (step === 5 && Number(get('monthlyBudgetUsd')) <= 0) errors.push('Укажите ориентировочный ежемесячный бюджет.');
+  if (step === 1 && (!specified(get('adults')) || !specified(get('children')))) errors.push('Укажите состав семьи.');
+  if (step === 2 && (!radioValue('plannedBasis') || !get('currentLocation') || !get('legalResidence'))) errors.push('Выберите основание для ВНЖ и место подачи.');
+  if (step === 3 && (numberValue('monthlyIncomeUsd') <= 0 || numberValue('eurUsdRate') <= 0 || !get('bankCountry') || !get('socialSecurityPlan'))) errors.push('Заполните данные о доходе и подтверждении.');
+  if (step === 4 && (!radioValue('goal') || !specified(get('monthsPerYear')) || !radioValue('languageReadiness') || !get('keepRuCitizenship'))) errors.push('Заполните долгосрочную цель.');
+  if (step === 5 && (numberValue('monthlyBudgetUsd') <= 0 || !get('citySize') || !get('pet'))) errors.push('Заполните бюджет и практические условия.');
   const root = $('#formError');
   root.hidden = errors.length === 0;
   root.textContent = errors.join(' ');
@@ -351,23 +376,43 @@ function switchToQuestionnaire() {
 
 function draftData() {
   const profile = readProfile();
-  return { ...profile, legalResidence: profile.legalResidence ? 'YES' : 'NO' };
+  return { version: 1, updatedAt: new Date().toISOString(), profile: { ...profile, legalResidence: profile.legalResidence === null ? '' : profile.legalResidence ? 'YES' : 'NO' } };
 }
 
 function restoreDraft() {
   try {
-    const draft = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    if (!draft) return;
+    const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    const draft = stored?.version === 1 && stored?.profile ? stored.profile : null;
+    if (!draft) return false;
     setRadioValue('plannedBasis', draft.plannedBasis);
     setRadioValue('goal', draft.goal);
     setRadioValue('languageReadiness', draft.languageReadiness);
     ['currentLocation','monthlyIncomeUsd','eurUsdRate','bankCountry','socialSecurityPlan','relationshipType','monthsPerYear','keepRuCitizenship','monthlyBudgetUsd','citySize','pet','dogBreed'].forEach((id) => { if (draft[id] != null && $(`#${id}`)) $(`#${id}`).value = draft[id]; });
     $('#legalResidence').value = draft.legalResidence === true ? 'YES' : draft.legalResidence === false ? 'NO' : draft.legalResidence;
     ['sameSexFamily','needsFamilyVisa','schoolNeeded','medicineRequired'].forEach((id) => { if (draft[id] != null) $(`#${id}`).checked = Boolean(draft[id]); });
-    setStepper('adults', Number(draft.adults || 1));
-    setStepper('children', Number(draft.children || 0));
+    setStepper('adults', draft.adults);
+    setStepper('children', draft.children);
     syncConditionalFields();
+    return true;
   } catch { localStorage.removeItem(STORAGE_KEY); }
+  return false;
+}
+
+function persistDraft() {
+  if (hasMeaningfulFormData()) localStorage.setItem(STORAGE_KEY, JSON.stringify(draftData()));
+}
+
+function clearQuestionnaire() {
+  localStorage.removeItem(STORAGE_KEY);
+  form.reset();
+  setStepper('adults', null);
+  setStepper('children', null);
+  lastCalculation = null;
+  $('#formError').hidden = true;
+  syncConditionalFields();
+  updateProfileSummary();
+  updateActionAvailability();
+  showStep(1, false);
 }
 
 function showToast(message) {
@@ -379,8 +424,13 @@ function showToast(message) {
 }
 
 function setStepper(id, value) {
+  if (!specified(value)) {
+    $(`#${id}`).value = '';
+    $(`#${id}Output`).textContent = '—';
+    return;
+  }
   const limits = id === 'adults' ? [1, 2] : [0, 3];
-  const safe = Math.max(limits[0], Math.min(limits[1], value));
+  const safe = Math.max(limits[0], Math.min(limits[1], Number(value)));
   $(`#${id}`).value = String(safe);
   $(`#${id}Output`).textContent = String(safe);
 }
@@ -399,7 +449,7 @@ async function init() {
     const response = await fetch('../data/spain-research-v2.2.json');
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     spainData = await response.json();
-    submitButton.disabled = false;
+    updateActionAvailability();
   } catch (error) {
     $('#formError').hidden = false;
     $('#formError').textContent = `Не удалось загрузить данные Испании: ${error.message}`;
@@ -408,8 +458,8 @@ async function init() {
 
 nextButton.addEventListener('click', () => { if (validateStep(currentStep)) { showStep(currentStep + 1); updateProfileSummary(); } });
 prevButton.addEventListener('click', () => showStep(currentStep - 1));
-form.addEventListener('input', () => { syncConditionalFields(); updateProfileSummary(); });
-form.addEventListener('change', () => { syncConditionalFields(); updateProfileSummary(); });
+form.addEventListener('input', () => { syncConditionalFields(); updateProfileSummary(); updateActionAvailability(); persistDraft(); });
+form.addEventListener('change', () => { syncConditionalFields(); updateProfileSummary(); updateActionAvailability(); persistDraft(); });
 form.addEventListener('submit', (event) => {
   event.preventDefault();
   if (!spainData || !validateStep(currentStep)) return;
@@ -422,12 +472,16 @@ $$('[data-stepper]').forEach((stepper) => stepper.addEventListener('click', (eve
   if (!button) return;
   const id = stepper.dataset.stepper;
   const delta = button.dataset.action === 'plus' ? 1 : -1;
-  setStepper(id, Number(get(id)) + delta);
+  const current = specified(get(id)) ? Number(get(id)) : (id === 'adults' ? 0 : delta < 0 ? 1 : 0);
+  setStepper(id, current + delta);
   syncConditionalFields();
   updateProfileSummary();
+  updateActionAvailability();
+  persistDraft();
 }));
 
-$('#saveDraft').addEventListener('click', () => { localStorage.setItem(STORAGE_KEY, JSON.stringify(draftData())); showToast('Анкета сохранена в этом браузере'); });
+$('#saveDraft').addEventListener('click', () => { if (hasMeaningfulFormData()) { localStorage.setItem(STORAGE_KEY, JSON.stringify(draftData())); showToast('Анкета сохранена в этом браузере'); } else showToast('Сначала заполните хотя бы одно поле'); });
+$('#clearDraft').addEventListener('click', () => { clearQuestionnaire(); showToast('Анкета очищена'); });
 $('#saveResult').addEventListener('click', () => { if (lastCalculation) { localStorage.setItem(RESULT_KEY, JSON.stringify({ savedAt: new Date().toISOString(), profile: readProfile(), calculation: lastCalculation })); showToast('Результат сохранён в этом браузере'); } });
 $('#editProfile').addEventListener('click', switchToQuestionnaire);
 

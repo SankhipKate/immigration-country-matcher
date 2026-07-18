@@ -50,9 +50,9 @@
               <label>Взрослые</label>
               <div class="stepper" data-stepper="adults">
                 <button type="button" data-action="minus" aria-label="Уменьшить число взрослых">−</button>
-                <output id="adultsOutput">1</output>
+                <output id="adultsOutput">—</output>
                 <button type="button" data-action="plus" aria-label="Увеличить число взрослых">+</button>
-                <input id="adults" type="hidden" value="1">
+                <input id="adults" type="hidden" value="">
               </div>
             </article>
 
@@ -60,9 +60,9 @@
               <label>Дети</label>
               <div class="stepper" data-stepper="children">
                 <button type="button" data-action="minus" aria-label="Уменьшить число детей">−</button>
-                <output id="childrenOutput">0</output>
+                <output id="childrenOutput">—</output>
                 <button type="button" data-action="plus" aria-label="Увеличить число детей">+</button>
-                <input id="children" type="hidden" value="0">
+                <input id="children" type="hidden" value="">
               </div>
             </article>
           </div>
@@ -72,13 +72,14 @@
               <label class="field">
                 <span>Как оформлены отношения</span>
                 <select id="relationshipType">
+                  <option value="" selected>Не выбрано</option>
                   <option value="MARRIAGE">Брак</option>
                   <option value="REGISTERED_PARTNERSHIP">Зарегистрированное партнёрство</option>
                   <option value="UNREGISTERED_PARTNER">Незарегистрированные отношения</option>
                 </select>
               </label>
               <div class="toggle-list">
-                <label class="toggle-row"><span><b>Партнёру нужен семейный ВНЖ</b><small>Учтём зависимый статус партнёра.</small></span><input id="needsFamilyVisa" type="checkbox" checked><i></i></label>
+                <label class="toggle-row"><span><b>Партнёру нужен семейный ВНЖ</b><small>Учтём зависимый статус партнёра.</small></span><input id="needsFamilyVisa" type="checkbox"><i></i></label>
                 <label class="toggle-row"><span><b>Однополая семья</b><small>Проверим признание семьи для выбранного варианта легализации.</small></span><input id="sameSexFamily" type="checkbox"><i></i></label>
               </div>
             </div>
@@ -94,7 +95,7 @@
           <fieldset class="choice-group">
             <legend>Основание для ВНЖ</legend>
             <div class="choice-grid basis-grid">
-              <label class="choice-card"><input type="radio" name="plannedBasis" value="REMOTE_EMPLOYEE" checked><span>Удалённая работа<small>Работодатель за пределами Испании</small></span></label>
+              <label class="choice-card"><input type="radio" name="plannedBasis" value="REMOTE_EMPLOYEE"><span>Удалённая работа<small>Работодатель за пределами Испании</small></span></label>
               <label class="choice-card"><input type="radio" name="plannedBasis" value="REMOTE_CONTRACTOR"><span>Фриланс и контракты<small>Иностранные клиенты</small></span></label>
               <label class="choice-card"><input type="radio" name="plannedBasis" value="PASSIVE_INCOME"><span>Пассивный доход<small>Без работы в Испании</small></span></label>
               <label class="choice-card"><input type="radio" name="plannedBasis" value="STUDY"><span>Учёба<small>Программа в Испании</small></span></label>
@@ -106,8 +107,8 @@
           </fieldset>
 
           <div class="field-grid two-col">
-            <label class="field"><span>Где вы находитесь сейчас</span><select id="currentLocation"><option value="THIRD_COUNTRY">В другой стране</option><option value="SPAIN">В Испании</option><option value="RUSSIA">В России</option></select></label>
-            <label class="field"><span>Законное резидентство в стране подачи</span><select id="legalResidence"><option value="YES">Есть</option><option value="NO">Нет</option></select></label>
+            <label class="field"><span>Где вы находитесь сейчас</span><select id="currentLocation"><option value="" selected>Не выбрано</option><option value="THIRD_COUNTRY">В другой стране</option><option value="SPAIN">В Испании</option><option value="RUSSIA">В России</option></select></label>
+            <label class="field"><span>Законное резидентство в стране подачи</span><select id="legalResidence"><option value="" selected>Не выбрано</option><option value="YES">Есть</option><option value="NO">Нет</option></select></label>
           </div>
         </section>
 
@@ -118,15 +119,15 @@
           </div>
 
           <div class="field-grid two-col">
-            <label class="field money-field"><span>Подтверждаемый доход, USD/мес</span><div><input id="monthlyIncomeUsd" type="number" min="0" step="100" value="3200" inputmode="numeric"><b>USD</b></div></label>
-            <label class="field"><span>Где находится счёт с доходом</span><select id="bankCountry"><option value="OTHER">Не в России</option><option value="RU">В России</option></select></label>
+            <label class="field money-field"><span>Подтверждаемый доход, USD/мес</span><div><input id="monthlyIncomeUsd" type="number" min="0" step="100" value="" inputmode="numeric" placeholder="Не указано"><b>USD</b></div></label>
+            <label class="field"><span>Где находится счёт с доходом</span><select id="bankCountry"><option value="" selected>Не выбрано</option><option value="OTHER">Не в России</option><option value="RU">В России</option></select></label>
           </div>
 
-          <label class="field wide-field"><span>Как планируете подтвердить социальное страхование</span><select id="socialSecurityPlan"><option value="REGISTER_SPAIN">Оформить в Испании</option><option value="FOREIGN_CERTIFICATE">Использовать иностранный сертификат</option><option value="UNKNOWN">Пока не определено</option></select></label>
+          <label class="field wide-field"><span>Как планируете подтвердить социальное страхование</span><select id="socialSecurityPlan"><option value="" selected>Не выбрано</option><option value="REGISTER_SPAIN">Оформить в Испании</option><option value="FOREIGN_CERTIFICATE">Использовать иностранный сертификат</option><option value="UNKNOWN">Пока не определено</option></select></label>
 
           <details class="advanced-details">
             <summary>Параметры расчёта</summary>
-            <label class="field rate-field"><span>Сколько USD за 1 EUR</span><input id="eurUsdRate" type="number" min="0.5" step="0.001" value="1.144"></label>
+            <label class="field rate-field"><span>Сколько USD за 1 EUR</span><input id="eurUsdRate" type="number" min="0.5" step="0.001" value="" placeholder="Не указано"></label>
             <p>Курс нужен только для демонстрационного расчёта. В коммерческой версии он будет обновляться автоматически.</p>
           </details>
         </section>
@@ -140,22 +141,22 @@
           <fieldset class="choice-group">
             <legend>Необходимый результат</legend>
             <div class="segmented wide-segments">
-              <label><input type="radio" name="goal" value="TEMPORARY_RESIDENCE" checked><span>ВНЖ достаточно</span></label>
+              <label><input type="radio" name="goal" value="TEMPORARY_RESIDENCE"><span>ВНЖ достаточно</span></label>
               <label><input type="radio" name="goal" value="PR_REQUIRED"><span>ПМЖ обязательно</span></label>
               <label><input type="radio" name="goal" value="CITIZENSHIP_REQUIRED"><span>Гражданство обязательно</span></label>
             </div>
           </fieldset>
 
           <div class="field-grid two-col">
-            <label class="field"><span>Месяцев в году готовы жить в Испании</span><input id="monthsPerYear" type="number" min="0" max="12" value="12"></label>
-            <label class="field"><span>Сохранение гражданства РФ</span><select id="keepRuCitizenship"><option value="DESIRABLE">Желательно</option><option value="REQUIRED">Обязательно</option><option value="NOT_IMPORTANT">Не является условием</option></select></label>
+            <label class="field"><span>Месяцев в году готовы жить в Испании</span><input id="monthsPerYear" type="number" min="0" max="12" value="" placeholder="Не указано"></label>
+            <label class="field"><span>Сохранение гражданства РФ</span><select id="keepRuCitizenship"><option value="" selected>Не выбрано</option><option value="DESIRABLE">Желательно</option><option value="REQUIRED">Обязательно</option><option value="NOT_IMPORTANT">Не является условием</option></select></label>
           </div>
 
           <fieldset class="choice-group">
             <legend>Готовность к испанскому</legend>
             <div class="segmented language-segments">
               <label><input type="radio" name="languageReadiness" value="NO"><span>Нет</span></label>
-              <label><input type="radio" name="languageReadiness" value="BASIC" checked><span>Базовый уровень</span></label>
+              <label><input type="radio" name="languageReadiness" value="BASIC"><span>Базовый уровень</span></label>
               <label><input type="radio" name="languageReadiness" value="YES"><span>Да</span></label>
             </div>
           </fieldset>
@@ -168,8 +169,8 @@
           </div>
 
           <div class="field-grid two-col">
-            <label class="field money-field"><span>Бюджет без школы, USD/мес</span><div><input id="monthlyBudgetUsd" type="number" min="0" step="100" value="2200" inputmode="numeric"><b>USD</b></div></label>
-            <label class="field"><span>Предпочитаемый размер города</span><select id="citySize"><option value="ANY">Неважно</option><option value="LARGE">Крупный</option><option value="MEDIUM">Средний</option><option value="SMALL">Небольшой</option></select></label>
+            <label class="field money-field"><span>Бюджет без школы, USD/мес</span><div><input id="monthlyBudgetUsd" type="number" min="0" step="100" value="" inputmode="numeric" placeholder="Не указано"><b>USD</b></div></label>
+            <label class="field"><span>Предпочитаемый размер города</span><select id="citySize"><option value="" selected>Не выбрано</option><option value="ANY">Неважно</option><option value="LARGE">Крупный</option><option value="MEDIUM">Средний</option><option value="SMALL">Небольшой</option></select></label>
           </div>
 
           <div class="toggle-grid">
@@ -178,7 +179,7 @@
           </div>
 
           <div class="field-grid two-col">
-            <label class="field"><span>Домашнее животное</span><select id="pet"><option value="NONE">Нет</option><option value="DOG">Собака</option><option value="CAT">Кошка</option></select></label>
+            <label class="field"><span>Домашнее животное</span><select id="pet"><option value="" selected>Не выбрано</option><option value="NONE">Нет</option><option value="DOG">Собака</option><option value="CAT">Кошка</option></select></label>
             <label id="dogBreedField" class="field" hidden><span>Порода собаки</span><input id="dogBreed" type="text" placeholder="Например, корги"></label>
           </div>
         </section>
@@ -193,7 +194,7 @@
         </section>
 
         <div class="wizard-actions">
-          <button id="saveDraft" class="text-button" type="button">Сохранить и вернуться позже</button>
+          <div class="draft-actions"><button id="saveDraft" class="text-button" type="button">Сохранить и вернуться позже</button><button id="clearDraft" class="text-button muted-action" type="button">Очистить анкету</button></div>
           <div>
             <button id="prevStep" class="secondary-button" type="button" hidden>Назад</button>
             <button id="nextStep" class="primary-button" type="button">Продолжить <span aria-hidden="true">→</span></button>
