@@ -1,0 +1,219 @@
+[
+  {
+    "schema_version": "user-profile-v1",
+    "profile_id": "TP_U01",
+    "citizenships": ["RU"],
+    "residence": {
+      "current_country": "PH",
+      "current_status": "TOURIST_OR_VISA_FREE"
+    },
+    "application_preferences": {
+      "methods": ["CURRENT_COUNTRY", "RUSSIA", "IN_COUNTRY_AFTER_ENTRY"]
+    },
+    "family": {
+      "adults_count": 2,
+      "partner_included": true,
+      "relationship_type": "MARRIAGE",
+      "children": [{ "age_years": 13 }],
+      "school_needed": true
+    },
+    "lgbt": {
+      "enabled": true,
+      "consent_for_personalization": true,
+      "family_recognition_relevant": true,
+      "safety_relevant": true
+    },
+    "income": {
+      "primary": {
+        "owner": "APPLICANT",
+        "type": "REMOTE_EMPLOYMENT",
+        "source_country": "PH",
+        "bank_country": "PH",
+        "monthly_provable": { "amount": 3000, "currency": "USD" },
+        "evidence_level": "FULL",
+        "history_months": 18,
+        "stability": "FIXED",
+        "continues_after_move": "LIKELY",
+        "contract_remaining_months": null,
+        "business_age_months": null
+      },
+      "has_additional_sources": false,
+      "additional_sources": [],
+      "partner": {
+        "has_income": false,
+        "sources": []
+      },
+      "savings": null
+    },
+    "goal": {
+      "long_term": "CITIZENSHIP_DESIRED",
+      "physical_presence": "MOST_OF_YEAR",
+      "language_exam_readiness": "BASIC_ONLY",
+      "keep_russian_citizenship": "REQUIRED"
+    },
+    "preferences": {
+      "monthly_budget": { "amount": 2500, "currency": "USD" },
+      "city_size": "MEDIUM",
+      "climate": "COOL"
+    },
+    "pets": {
+      "types": ["DOG"],
+      "dogs": [{ "breed": "Welsh Corgi Pembroke" }],
+      "other_pet_notes": null
+    },
+    "special_circumstances": ["NONE"],
+    "optional_modules": {
+      "medical": {
+        "specific_medicine_required": false,
+        "regular_care_required": false,
+        "prefer_not_to_say": false,
+        "details": null
+      }
+    },
+    "route_specific_answers": {}
+  },
+  {
+    "schema_version": "user-profile-v1",
+    "profile_id": "TP_U02",
+    "citizenships": ["RU", "AR"],
+    "residence": {
+      "current_country": "RU",
+      "current_status": "CITIZENSHIP"
+    },
+    "application_preferences": {
+      "methods": ["ANY"]
+    },
+    "family": {
+      "adults_count": 1,
+      "partner_included": false,
+      "relationship_type": null,
+      "children": [],
+      "school_needed": false
+    },
+    "lgbt": {
+      "enabled": false,
+      "consent_for_personalization": false,
+      "family_recognition_relevant": null,
+      "safety_relevant": null
+    },
+    "income": {
+      "primary": {
+        "owner": "APPLICANT",
+        "type": "FREELANCE_OR_SELF_EMPLOYED",
+        "source_country": "US",
+        "bank_country": "GE",
+        "monthly_provable": { "amount": 4200, "currency": "USD" },
+        "evidence_level": "FULL",
+        "history_months": 30,
+        "stability": "SLIGHTLY_VARIABLE",
+        "continues_after_move": "YES",
+        "contract_remaining_months": null,
+        "business_age_months": 30
+      },
+      "has_additional_sources": false,
+      "additional_sources": [],
+      "partner": {
+        "has_income": false,
+        "sources": []
+      },
+      "savings": { "amount": 25000, "currency": "USD" }
+    },
+    "goal": {
+      "long_term": "PR_REQUIRED",
+      "physical_presence": "AT_LEAST_8_MONTHS",
+      "language_exam_readiness": "YES",
+      "keep_russian_citizenship": "DESIRABLE"
+    },
+    "preferences": {
+      "monthly_budget": null,
+      "city_size": "ANY",
+      "climate": "WARM"
+    },
+    "pets": {
+      "types": ["NONE"],
+      "dogs": [],
+      "other_pet_notes": null
+    },
+    "special_circumstances": ["NONE"],
+    "route_specific_answers": {}
+  },
+  {
+    "schema_version": "user-profile-v1",
+    "profile_id": "TP_U03",
+    "citizenships": ["RU"],
+    "residence": {
+      "current_country": "TR",
+      "current_status": "TEMPORARY_RESIDENCE"
+    },
+    "application_preferences": {
+      "methods": ["CURRENT_COUNTRY"]
+    },
+    "family": {
+      "adults_count": 1,
+      "partner_included": false,
+      "relationship_type": null,
+      "children": [{ "age_years": 7 }],
+      "school_needed": true
+    },
+    "lgbt": {
+      "enabled": false,
+      "consent_for_personalization": false,
+      "family_recognition_relevant": null,
+      "safety_relevant": null
+    },
+    "income": {
+      "primary": {
+        "owner": "APPLICANT",
+        "type": "PASSIVE_INCOME",
+        "source_country": "RU",
+        "bank_country": "RU",
+        "monthly_provable": { "amount": 180000, "currency": "RUB" },
+        "evidence_level": "PARTIAL",
+        "history_months": 60,
+        "stability": "FIXED",
+        "continues_after_move": "YES",
+        "contract_remaining_months": null,
+        "business_age_months": null
+      },
+      "has_additional_sources": true,
+      "additional_sources": [
+        {
+          "owner": "APPLICANT",
+          "type": "OTHER_REGULAR_REMOTE_INCOME",
+          "source_country": "RU",
+          "bank_country": "RU",
+          "monthly_provable": { "amount": 50000, "currency": "RUB" },
+          "evidence_level": "PARTIAL",
+          "history_months": 12,
+          "stability": "HIGHLY_VARIABLE",
+          "continues_after_move": "UNKNOWN",
+          "contract_remaining_months": null,
+          "business_age_months": null
+        }
+      ],
+      "partner": {
+        "has_income": false,
+        "sources": []
+      },
+      "savings": { "amount": 1500000, "currency": "RUB" }
+    },
+    "goal": {
+      "long_term": "CITIZENSHIP_REQUIRED",
+      "physical_presence": "AT_LEAST_6_MONTHS",
+      "language_exam_readiness": "DEPENDS_ON_LANGUAGE",
+      "keep_russian_citizenship": "REQUIRED"
+    },
+    "preferences": {
+      "monthly_budget": { "amount": 2200, "currency": "USD" },
+      "city_size": "SMALL",
+      "climate": "TEMPERATE"
+    },
+    "pets": {
+      "types": ["CAT"],
+      "dogs": [],
+      "other_pet_notes": null
+    },
+    "special_circumstances": ["PREFER_NOT_TO_SAY"],
+    "route_specific_answers": {}
+  }
+]

@@ -1,0 +1,436 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sankhipkate.github.io/immigration-country-matcher/data/schemas/user-profile-v1.schema.json",
+  "title": "Immigration Matcher — completed universal user profile v1",
+  "description": "Строгий контракт заполненного универсального профиля. В профиль не входят валютные курсы и специфические вопросы отдельных стран или вариантов легализации.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "citizenships",
+    "residence",
+    "application_preferences",
+    "family",
+    "lgbt",
+    "income",
+    "goal",
+    "preferences",
+    "pets",
+    "special_circumstances"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "user-profile-v1"
+    },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "citizenships": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "contains": { "const": "RU" },
+      "items": { "$ref": "#/$defs/countryCode" },
+      "description": "Гражданства пользователя. Для MVP обязательно содержит RU; второе гражданство оценивается отдельно по каждому варианту легализации."
+    },
+    "residence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["current_country", "current_status"],
+      "properties": {
+        "current_country": { "$ref": "#/$defs/countryCode" },
+        "current_status": {
+          "enum": [
+            "CITIZENSHIP",
+            "PERMANENT_RESIDENCE",
+            "TEMPORARY_RESIDENCE",
+            "WORK_OR_FAMILY_VISA",
+            "STUDENT_STATUS",
+            "TOURIST_OR_VISA_FREE",
+            "OTHER_LEGAL_STATUS",
+            "NO_LEGAL_STATUS"
+          ]
+        }
+      }
+    },
+    "application_preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["methods"],
+      "properties": {
+        "methods": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "CURRENT_COUNTRY",
+              "RUSSIA",
+              "IN_COUNTRY_AFTER_ENTRY",
+              "ANY"
+            ]
+          }
+        }
+      }
+    },
+    "family": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "adults_count",
+        "partner_included",
+        "relationship_type",
+        "children",
+        "school_needed"
+      ],
+      "properties": {
+        "adults_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2,
+          "description": "В MVP: основной заявитель и при необходимости один супруг/партнёр."
+        },
+        "partner_included": { "type": "boolean" },
+        "relationship_type": {
+          "type": ["string", "null"],
+          "enum": [
+            "MARRIAGE",
+            "REGISTERED_PARTNERSHIP",
+            "UNREGISTERED_PARTNER",
+            null
+          ]
+        },
+        "children": {
+          "type": "array",
+          "maxItems": 10,
+          "items": { "$ref": "#/$defs/child" }
+        },
+        "school_needed": { "type": "boolean" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "partner_included": { "const": true } },
+            "required": ["partner_included"]
+          },
+          "then": {
+            "properties": {
+              "adults_count": { "const": 2 },
+              "relationship_type": {
+                "enum": [
+                  "MARRIAGE",
+                  "REGISTERED_PARTNERSHIP",
+                  "UNREGISTERED_PARTNER"
+                ]
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "adults_count": { "const": 1 },
+              "relationship_type": { "type": "null" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "children": { "maxItems": 0 } },
+            "required": ["children"]
+          },
+          "then": {
+            "properties": { "school_needed": { "const": false } }
+          }
+        }
+      ]
+    },
+    "lgbt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "consent_for_personalization"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "consent_for_personalization": { "type": "boolean" },
+        "family_recognition_relevant": { "type": ["boolean", "null"] },
+        "safety_relevant": { "type": ["boolean", "null"] }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "enabled": { "const": true } },
+            "required": ["enabled"]
+          },
+          "then": {
+            "properties": {
+              "consent_for_personalization": { "const": true }
+            }
+          }
+        }
+      ]
+    },
+    "income": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primary", "has_additional_sources", "additional_sources", "partner"],
+      "properties": {
+        "primary": { "$ref": "#/$defs/incomeSource" },
+        "has_additional_sources": { "type": "boolean" },
+        "additional_sources": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/incomeSource" }
+        },
+        "partner": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["has_income", "sources"],
+          "properties": {
+            "has_income": { "type": "boolean" },
+            "sources": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/incomeSource" }
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": { "has_income": { "const": false } },
+                "required": ["has_income"]
+              },
+              "then": {
+                "properties": { "sources": { "maxItems": 0 } }
+              },
+              "else": {
+                "properties": { "sources": { "minItems": 1 } }
+              }
+            }
+          ]
+        },
+        "savings": {
+          "anyOf": [
+            { "$ref": "#/$defs/money" },
+            { "type": "null" }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "has_additional_sources": { "const": false } },
+            "required": ["has_additional_sources"]
+          },
+          "then": {
+            "properties": { "additional_sources": { "maxItems": 0 } }
+          },
+          "else": {
+            "properties": { "additional_sources": { "minItems": 1 } }
+          }
+        }
+      ]
+    },
+    "goal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "long_term",
+        "physical_presence",
+        "language_exam_readiness",
+        "keep_russian_citizenship"
+      ],
+      "properties": {
+        "long_term": {
+          "enum": [
+            "TEMPORARY_RESIDENCE_SUFFICIENT",
+            "PR_REQUIRED",
+            "CITIZENSHIP_DESIRED",
+            "CITIZENSHIP_MAIN_GOAL",
+            "CITIZENSHIP_REQUIRED",
+            "UNDECIDED"
+          ]
+        },
+        "physical_presence": {
+          "enum": [
+            "MOST_OF_YEAR",
+            "AT_LEAST_8_MONTHS",
+            "AT_LEAST_6_MONTHS",
+            "LESS_THAN_6_MONTHS",
+            "DEPENDS_ON_COUNTRY"
+          ]
+        },
+        "language_exam_readiness": {
+          "enum": ["YES", "BASIC_ONLY", "NO", "DEPENDS_ON_LANGUAGE"]
+        },
+        "keep_russian_citizenship": {
+          "enum": ["REQUIRED", "DESIRABLE", "NOT_IMPORTANT", "WILLING_TO_RENOUNCE"]
+        }
+      }
+    },
+    "preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["monthly_budget", "city_size", "climate"],
+      "properties": {
+        "monthly_budget": {
+          "anyOf": [
+            { "$ref": "#/$defs/money" },
+            { "type": "null" }
+          ],
+          "description": "Максимальные ежемесячные расходы семьи. null означает, что бюджет не определён. Школа рассчитывается отдельно."
+        },
+        "city_size": {
+          "enum": ["LARGE", "MEDIUM", "SMALL", "ANY"]
+        },
+        "climate": {
+          "enum": ["COOL", "TEMPERATE", "WARM", "HOT", "ANY"]
+        }
+      }
+    },
+    "pets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["types", "dogs"],
+      "properties": {
+        "types": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": ["NONE", "DOG", "CAT", "OTHER"]
+          }
+        },
+        "dogs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["breed"],
+            "properties": {
+              "breed": {
+                "type": ["string", "null"],
+                "maxLength": 120,
+                "description": "Порода может быть неизвестна. Отсутствие породы не блокирует юридический статус страны."
+              }
+            }
+          }
+        },
+        "other_pet_notes": {
+          "type": ["string", "null"],
+          "maxLength": 500
+        }
+      }
+    },
+    "special_circumstances": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "NONE",
+          "CRIMINAL_RECORD",
+          "DEPORTATION",
+          "ENTRY_BAN",
+          "SERIOUS_VISA_VIOLATION",
+          "PREFER_NOT_TO_SAY"
+        ]
+      },
+      "description": "Любое значение кроме NONE не исключает страну автоматически и переводит затронутые варианты в индивидуальную проверку."
+    },
+    "optional_modules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "medical": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["specific_medicine_required", "regular_care_required", "prefer_not_to_say"],
+          "properties": {
+            "specific_medicine_required": { "type": "boolean" },
+            "regular_care_required": { "type": "boolean" },
+            "prefer_not_to_say": { "type": "boolean" },
+            "details": { "type": ["string", "null"], "maxLength": 1000 }
+          }
+        }
+      }
+    },
+    "route_specific_answers": {
+      "type": "object",
+      "description": "Ответы на уточняющие вопросы, показанные после первого расчёта. Ключ — route_id; содержимое валидируется отдельной схемой варианта легализации.",
+      "additionalProperties": {
+        "type": "object"
+      }
+    }
+  },
+  "$defs": {
+    "countryCode": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$"
+    },
+    "currencyCode": {
+      "type": "string",
+      "pattern": "^[A-Z]{3}$"
+    },
+    "money": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["amount", "currency"],
+      "properties": {
+        "amount": { "type": "number", "minimum": 0 },
+        "currency": { "$ref": "#/$defs/currencyCode" }
+      }
+    },
+    "child": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["age_years"],
+      "properties": {
+        "age_years": { "type": "integer", "minimum": 0, "maximum": 25 }
+      }
+    },
+    "incomeSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "owner",
+        "type",
+        "source_country",
+        "bank_country",
+        "monthly_provable",
+        "evidence_level"
+      ],
+      "properties": {
+        "owner": { "enum": ["APPLICANT", "PARTNER"] },
+        "type": {
+          "enum": [
+            "REMOTE_EMPLOYMENT",
+            "CONTRACTOR",
+            "FREELANCE_OR_SELF_EMPLOYED",
+            "SOLE_PROPRIETOR",
+            "COMPANY_OWNER",
+            "PASSIVE_INCOME",
+            "OTHER_REGULAR_REMOTE_INCOME"
+          ]
+        },
+        "source_country": { "$ref": "#/$defs/countryCode" },
+        "bank_country": { "$ref": "#/$defs/countryCode" },
+        "monthly_provable": { "$ref": "#/$defs/money" },
+        "evidence_level": { "enum": ["FULL", "PARTIAL", "NONE"] },
+        "history_months": { "type": ["integer", "null"], "minimum": 0 },
+        "stability": {
+          "type": ["string", "null"],
+          "enum": ["FIXED", "SLIGHTLY_VARIABLE", "HIGHLY_VARIABLE", "IRREGULAR", null]
+        },
+        "continues_after_move": {
+          "type": ["string", "null"],
+          "enum": ["YES", "LIKELY", "DEPENDS_ON_COUNTRY", "NO", "UNKNOWN", null]
+        },
+        "contract_remaining_months": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "business_age_months": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        }
+      }
+    }
+  }
+}
