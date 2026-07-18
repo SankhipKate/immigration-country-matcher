@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Пилот персонального иммиграционного матчера для Испании">
+  <title>Испания — персональный иммиграционный матчер</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="hero-inner">
+      <a class="back" href="../">← Общий каталог стран</a>
+      <h1>Подходит ли вам Испания?</h1>
+      <p>Пилот новой модели: профиль проверяется по шести миграционным маршрутам, затем отдельно оцениваются семья, долгосрочный статус, бюджет и города.</p>
+      <span class="version">Версия 0.5 · вертикальный сценарий Испании · данные v2.2</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <form id="profile-form" class="panel form-panel">
+      <h2>Ваш профиль</h2>
+      <p class="intro">Все суммы дохода вводятся в USD. Движок переводит их в EUR по указанному курсу и сравнивает с официальными требованиями.</p>
+
+      <fieldset>
+        <legend>Основание и место подачи</legend>
+        <div class="field">
+          <label for="plannedBasis">На каком основании планируете переезд</label>
+          <select id="plannedBasis">
+            <option value="REMOTE_EMPLOYEE">Удалённая работа по найму</option>
+            <option value="REMOTE_CONTRACTOR">Контракты или фриланс с иностранными клиентами</option>
+            <option value="FOREIGN_COMPANY_OWNER">Владелец иностранной компании</option>
+            <option value="PASSIVE_INCOME">Пассивный доход или накопления без работы</option>
+            <option value="SELF_EMPLOYED_SPAIN">Работа на себя в Испании</option>
+            <option value="INNOVATIVE_PROJECT">Инновационный проект</option>
+            <option value="SPANISH_JOB_OFFER">Оффер испанского работодателя</option>
+            <option value="STUDY">Учёба</option>
+          </select>
+        </div>
+        <div class="two">
+          <div class="field">
+            <label for="currentLocation">Где вы находитесь</label>
+            <select id="currentLocation">
+              <option value="THIRD_COUNTRY">В другой стране</option>
+              <option value="SPAIN">В Испании</option>
+              <option value="RUSSIA">В России</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="legalResidence">Законное резидентство в стране подачи</label>
+            <select id="legalResidence">
+              <option value="YES">Есть</option>
+              <option value="NO">Нет</option>
+            </select>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Доход и документы</legend>
+        <div class="two">
+          <div class="field">
+            <label for="monthlyIncomeUsd">Подтверждаемый доход, USD/месяц</label>
+            <input id="monthlyIncomeUsd" type="number" min="0" step="100" value="3200">
+          </div>
+          <div class="field">
+            <label for="eurUsdRate">Сколько USD за 1 EUR</label>
+            <input id="eurUsdRate" type="number" min="0.5" step="0.001" value="1.144">
+          </div>
+        </div>
+        <div class="two">
+          <div class="field">
+            <label for="bankCountry">Где находится счёт с доходом</label>
+            <select id="bankCountry">
+              <option value="OTHER">Не в России</option>
+              <option value="RU">В России</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="socialSecurityPlan">Соцстрахование для DNV</label>
+            <select id="socialSecurityPlan">
+              <option value="REGISTER_SPAIN">Готова оформить в Испании</option>
+              <option value="FOREIGN_CERTIFICATE">Планирую иностранный сертификат</option>
+              <option value="UNKNOWN">Пока не определено</option>
+            </select>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Семья</legend>
+        <div class="two">
+          <div class="field">
+            <label for="adults">Взрослых</label>
+            <select id="adults"><option value="1">1</option><option value="2">2</option></select>
+          </div>
+          <div class="field">
+            <label for="children">Детей</label>
+            <select id="children"><option value="0">0</option><option value="1">1</option><option value="2">2</option></select>
+          </div>
+        </div>
+        <div id="relationshipBlock" hidden>
+          <div class="field">
+            <label for="relationshipType">Как оформлены отношения</label>
+            <select id="relationshipType">
+              <option value="MARRIAGE">Брак</option>
+              <option value="REGISTERED_PARTNERSHIP">Зарегистрированное партнёрство</option>
+              <option value="UNREGISTERED_PARTNER">Незарегистрированные отношения</option>
+            </select>
+          </div>
+          <label class="check"><input id="needsFamilyVisa" type="checkbox" checked> Партнёру нужен зависимый ВНЖ</label>
+          <label class="check"><input id="sameSexFamily" type="checkbox"> Однополая семья</label>
+        </div>
+        <label class="check"><input id="schoolNeeded" type="checkbox"> Нужна международная школа</label>
+      </fieldset>
+
+      <fieldset>
+        <legend>Долгосрочная цель</legend>
+        <div class="field">
+          <label for="goal">Необходимый результат</label>
+          <select id="goal">
+            <option value="TEMPORARY_RESIDENCE">ВНЖ достаточно</option>
+            <option value="PR_REQUIRED">ПМЖ обязательно</option>
+            <option value="CITIZENSHIP_REQUIRED">Гражданство обязательно</option>
+          </select>
+        </div>
+        <div class="two">
+          <div class="field">
+            <label for="monthsPerYear">Месяцев в году в Испании</label>
+            <input id="monthsPerYear" type="number" min="0" max="12" value="12">
+          </div>
+          <div class="field">
+            <label for="languageReadiness">Готовность к испанскому</label>
+            <select id="languageReadiness">
+              <option value="YES">Да</option>
+              <option value="BASIC">Только базовый уровень</option>
+              <option value="NO">Нет</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="keepRuCitizenship">Сохранение гражданства РФ</label>
+          <select id="keepRuCitizenship">
+            <option value="DESIRABLE">Желательно</option>
+            <option value="REQUIRED">Обязательно</option>
+            <option value="NOT_IMPORTANT">Не является условием</option>
+          </select>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Город и практические условия</legend>
+        <div class="two">
+          <div class="field">
+            <label for="monthlyBudgetUsd">Бюджет без школы, USD/месяц</label>
+            <input id="monthlyBudgetUsd" type="number" min="0" step="100" value="2200">
+          </div>
+          <div class="field">
+            <label for="citySize">Размер города</label>
+            <select id="citySize">
+              <option value="ANY">Неважно</option>
+              <option value="LARGE">Крупный</option>
+              <option value="MEDIUM">Средний</option>
+              <option value="SMALL">Небольшой</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="pet">Животное</label>
+          <select id="pet"><option value="NONE">Нет</option><option value="DOG">Собака</option><option value="CAT">Кошка</option></select>
+        </div>
+        <div id="dogBreedField" class="field" hidden>
+          <label for="dogBreed">Порода собаки</label>
+          <input id="dogBreed" type="text" placeholder="Например, корги">
+        </div>
+        <label class="check"><input id="medicineRequired" type="checkbox"> Нужна постоянная доступность конкретного рецептурного лекарства</label>
+      </fieldset>
+
+      <button id="calculate" class="primary" type="submit" disabled>Рассчитать Испанию</button>
+    </form>
+
+    <section id="result" class="panel result-panel" aria-live="polite">
+      <div class="empty"><b>Загрузка данных Испании</b><p>После загрузки будет выполнен расчёт демонстрационного профиля.</p></div>
+    </section>
+  </main>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
