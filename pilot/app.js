@@ -1,34 +1,70 @@
 import {
   calculateSpain,
   STATUS_LABELS_RU,
-  COUNTRY_GROUP_LABELS_RU,
 } from '../js/spain-calculator.js';
 
-const form = document.querySelector('#profile-form');
-const resultRoot = document.querySelector('#result');
-const submitButton = document.querySelector('#calculate');
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+const form = $('#profile-form');
+const questionnaireView = $('#questionnaireView');
+const resultView = $('#resultView');
+const resultRoot = $('#result');
+const submitButton = $('#calculate');
+const nextButton = $('#nextStep');
+const prevButton = $('#prevStep');
+const steps = $$('.wizard-step');
+const TOTAL_STEPS = steps.length;
+const STORAGE_KEY = 'immigration-matcher-spain-draft-v06';
+const RESULT_KEY = 'immigration-matcher-spain-result-v06';
+let currentStep = 1;
 let spainData;
+let lastCalculation;
 
 const currency = (value, code = 'USD', digits = 0) =>
   new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: code,
-    maximumFractionDigits: digits,
+    style: 'currency', currency: code, maximumFractionDigits: digits,
   }).format(Number(value || 0));
 
+const number = (value) => new Intl.NumberFormat('ru-RU').format(Number(value || 0));
+
 const escapeHtml = (value) => String(value ?? '')
-  .replaceAll('&', '&amp;')
-  .replaceAll('<', '&lt;')
-  .replaceAll('>', '&gt;')
-  .replaceAll('"', '&quot;')
-  .replaceAll("'", '&#039;');
+  .replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+  .replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+
+const radioValue = (name) => $(`input[name="${name}"]:checked`)?.value;
+const setRadioValue = (name, value) => {
+  const input = $(`input[name="${name}"][value="${CSS.escape(String(value))}"]`);
+  if (input) input.checked = true;
+};
+const get = (id) => $(`#${id}`).value;
+const checked = (id) => $(`#${id}`).checked;
+
+const BASIS_LABELS = {
+  REMOTE_EMPLOYEE: 'Удалённая работа по найму',
+  REMOTE_CONTRACTOR: 'Фриланс и контракты',
+  FOREIGN_COMPANY_OWNER: 'Владелец иностранной компании',
+  PASSIVE_INCOME: 'Пассивный доход',
+  SELF_EMPLOYED_SPAIN: 'Работа на себя в Испании',
+  INNOVATIVE_PROJECT: 'Инновационный проект',
+  SPANISH_JOB_OFFER: 'Оффер испанского работодателя',
+  STUDY: 'Учёба',
+};
+const GOAL_LABELS = {
+  TEMPORARY_RESIDENCE: 'ВНЖ', PR_REQUIRED: 'ПМЖ', CITIZENSHIP_REQUIRED: 'Гражданство',
+};
+const LANGUAGE_LABELS = { NO: 'Нет', BASIC: 'Базовый уровень', YES: 'Да' };
+const PET_LABELS = { NONE: 'Нет', DOG: 'Собака', CAT: 'Кошка' };
+const LOCATION_LABELS = { THIRD_COUNTRY: 'В другой стране', SPAIN: 'В Испании', RUSSIA: 'В России' };
+const CITY_DESCRIPTIONS = {
+  Аликанте: 'Экономичный прибрежный город с мягким климатом.',
+  Малага: 'Активный городской ритм и развитая инфраструктура.',
+  Валенсия: 'Баланс семейной жизни и городской инфраструктуры.',
+};
 
 function readProfile() {
-  const get = (id) => document.querySelector(`#${id}`).value;
-  const checked = (id) => document.querySelector(`#${id}`).checked;
   return {
     applicationNationality: 'RU',
-    plannedBasis: get('plannedBasis'),
+    plannedBasis: radioValue('plannedBasis'),
     currentLocation: get('currentLocation'),
     legalResidence: get('legalResidence') === 'YES',
     monthlyIncomeUsd: Number(get('monthlyIncomeUsd')),
@@ -38,12 +74,12 @@ function readProfile() {
     adults: Number(get('adults')),
     children: Number(get('children')),
     relationshipType: get('relationshipType'),
-    sameSexFamily: checked('sameSexFamily'),
-    needsFamilyVisa: checked('needsFamilyVisa'),
+    sameSexFamily: Number(get('adults')) > 1 && checked('sameSexFamily'),
+    needsFamilyVisa: Number(get('adults')) > 1 && checked('needsFamilyVisa'),
     schoolNeeded: checked('schoolNeeded'),
-    goal: get('goal'),
+    goal: radioValue('goal'),
     monthsPerYear: Number(get('monthsPerYear')),
-    languageReadiness: get('languageReadiness'),
+    languageReadiness: radioValue('languageReadiness'),
     keepRuCitizenship: get('keepRuCitizenship'),
     monthlyBudgetUsd: Number(get('monthlyBudgetUsd')),
     citySize: get('citySize'),
@@ -53,6 +89,77 @@ function readProfile() {
   };
 }
 
+function profileSummaryRows(profile, forResult = false) {
+  const family = `${profile.adults} ${profile.adults === 1 ? 'взрослый' : 'взрослых'}, ${profile.children} ${profile.children === 1 ? 'ребёнок' : 'детей'}`;
+  const rows = [
+    ['⌘', 'Основание для ВНЖ', BASIS_LABELS[profile.plannedBasis]],
+    ['▣', forResult ? 'Доход после пересчёта' : 'Доход', forResult && lastCalculation?.bestRoute ? currency(lastCalculation.bestRoute.incomeEur, 'EUR') : `${number(profile.monthlyIncomeUsd)} USD/мес`],
+    ['♙', 'Состав семьи', family],
+    ['◎', 'Цель', GOAL_LABELS[profile.goal]],
+    ['▤', 'Бюджет без школы', `${number(profile.monthlyBudgetUsd)} USD/мес`],
+  ];
+  if (!forResult) rows.push(
+    ['⌖', 'Где вы сейчас', LOCATION_LABELS[profile.currentLocation]],
+    ['◇', 'Школа', profile.schoolNeeded ? 'Нужна' : 'Не нужна'],
+    ['♢', 'Животное', PET_LABELS[profile.pet]],
+    ['文', 'Испанский', LANGUAGE_LABELS[profile.languageReadiness]],
+  );
+  return rows;
+}
+
+function renderSummary(root, profile, forResult = false) {
+  root.innerHTML = profileSummaryRows(profile, forResult).map(([icon, label, value]) => `
+    <div class="summary-row"><span class="summary-icon" aria-hidden="true">${icon}</span><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>
+  `).join('');
+}
+
+function updateProfileSummary() {
+  const profile = readProfile();
+  renderSummary($('#profileSummary'), profile);
+  if (currentStep === TOTAL_STEPS) renderReview(profile);
+}
+
+function renderReview(profile) {
+  const items = [
+    ['Кто переезжает', `${profile.adults} взросл., ${profile.children} дет.`],
+    ['Основание для ВНЖ', BASIS_LABELS[profile.plannedBasis]],
+    ['Доход', `${number(profile.monthlyIncomeUsd)} USD/мес`],
+    ['Место подачи', `${LOCATION_LABELS[profile.currentLocation]}, резидентство: ${profile.legalResidence ? 'есть' : 'нет'}`],
+    ['Цель', GOAL_LABELS[profile.goal]],
+    ['Бюджет', `${number(profile.monthlyBudgetUsd)} USD/мес`],
+    ['Школа', profile.schoolNeeded ? 'Нужна' : 'Не нужна'],
+    ['Животное', PET_LABELS[profile.pet]],
+  ];
+  $('#reviewSummary').innerHTML = items.map(([label, value]) => `<div class="review-item"><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>`).join('');
+}
+
+function showStep(step, shouldScroll = true) {
+  currentStep = Math.max(1, Math.min(TOTAL_STEPS, step));
+  steps.forEach((section, index) => {
+    const active = index + 1 === currentStep;
+    section.hidden = !active;
+    section.classList.toggle('is-active', active);
+  });
+  $('#stepLabel').textContent = `Шаг ${currentStep} из ${TOTAL_STEPS}`;
+  $('#progressBar').style.width = `${currentStep / TOTAL_STEPS * 100}%`;
+  prevButton.hidden = currentStep === 1;
+  nextButton.hidden = currentStep === TOTAL_STEPS;
+  submitButton.hidden = currentStep !== TOTAL_STEPS;
+  if (currentStep === TOTAL_STEPS) renderReview(readProfile());
+  if (shouldScroll) $('.wizard-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function validateStep(step) {
+  const errors = [];
+  if (step === 3 && Number(get('monthlyIncomeUsd')) <= 0) errors.push('Укажите подтверждаемый ежемесячный доход.');
+  if (step === 4 && Number(get('monthsPerYear')) < 0) errors.push('Проверьте число месяцев проживания.');
+  if (step === 5 && Number(get('monthlyBudgetUsd')) <= 0) errors.push('Укажите ориентировочный ежемесячный бюджет.');
+  const root = $('#formError');
+  root.hidden = errors.length === 0;
+  root.textContent = errors.join(' ');
+  return errors.length === 0;
+}
+
 function statusClass(status) {
   if (status === 'SUITABLE') return 'positive';
   if (status === 'SUITABLE_WITH_CONDITIONS' || status === 'PRELIMINARY_SUITABLE') return 'conditional';
@@ -60,151 +167,268 @@ function statusClass(status) {
   return 'review';
 }
 
-function list(title, items, className = '') {
-  if (!items?.length) return '';
-  return `
-    <section class="result-section ${className}">
-      <h3>${escapeHtml(title)}</h3>
-      <ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
-    </section>`;
+function statusIcon(status) {
+  const icons = {
+    SUITABLE: { symbol: '✓', className: 'positive' },
+    SUITABLE_WITH_CONDITIONS: { symbol: '!', className: 'conditional' },
+    PRELIMINARY_SUITABLE: { symbol: 'i', className: 'conditional information-symbol' },
+    UNSUITABLE: { symbol: '×', className: 'negative' },
+    INSUFFICIENT_COUNTRY_DATA: { symbol: '?', className: 'insufficient' },
+    INDIVIDUAL_REVIEW_REQUIRED: { symbol: 'i', className: 'information' },
+  };
+  return icons[status] || icons.INSUFFICIENT_COUNTRY_DATA;
+}
+
+function unique(items) { return [...new Set((items || []).filter(Boolean))]; }
+
+function userFacingText(value) {
+  return String(value ?? '')
+    .replaceAll('Маршрута', 'Варианта легализации')
+    .replaceAll('Маршруте', 'Варианте легализации')
+    .replaceAll('Маршрутом', 'Вариантом легализации')
+    .replaceAll('Маршрут', 'Вариант легализации')
+    .replaceAll('маршрута', 'варианта легализации')
+    .replaceAll('маршруте', 'варианте легализации')
+    .replaceAll('маршрутом', 'вариантом легализации')
+    .replaceAll('маршрут', 'вариант легализации')
+    .replaceAll('переезда', 'иммиграции')
+    .replaceAll('переезде', 'иммиграции')
+    .replaceAll('переезд', 'иммиграцию');
+}
+
+function friendlyWhy(calculation) {
+  const route = calculation.bestRoute;
+  const items = [];
+  if (route.thresholdEur != null && route.incomeEur >= route.thresholdEur) {
+    items.push(`Доход после пересчёта — ${currency(route.incomeEur, 'EUR')} в месяц — превышает необходимый доход ${currency(route.thresholdEur, 'EUR')}.`);
+  }
+  const confirmedChecks = (route.checks || [])
+    .filter((check) => check.status === 'SUITABLE' && check.message)
+    .map((check) => check.message);
+  if (calculation.recommendedCity?.budgetFit === 'MEETS') {
+    items.push(`Бюджет ${currency(calculation.profile.monthlyBudgetUsd)} в месяц покрывает рассчитанные расходы в городе ${calculation.recommendedCity.cityName}.`);
+  }
+  return unique([...items, ...confirmedChecks]).slice(0, 3);
+}
+
+function friendlyChecks(calculation) {
+  const route = calculation.bestRoute;
+  const combined = unique([...route.conditions, ...route.missing, ...route.review, ...route.preliminary, ...calculation.practicalMissing]);
+  if (!combined.length) return ['Перед подачей подтвердить актуальный список документов и требования консульства.'];
+  return combined.slice(0, 3);
+}
+
+function knownFacts(route) {
+  const items = [];
+  if (route.thresholdEur != null) items.push(`Необходимый доход для семьи: ${currency(route.thresholdEur, 'EUR')} в месяц.`);
+  if (route.incomeEur != null) items.push(`Доход после пересчёта: ${currency(route.incomeEur, 'EUR')} в месяц.`);
+  return unique([...items, ...route.conditions, ...route.preliminary]).slice(0, 3);
+}
+
+function changeRequirements(route) {
+  const items = [];
+  if (route.thresholdEur != null && route.incomeEur < route.thresholdEur) {
+    items.push(`Подтверждаемый доход должен составлять не менее ${currency(route.thresholdEur, 'EUR')} в месяц; сейчас после пересчёта — ${currency(route.incomeEur, 'EUR')}.`);
+  }
+  return unique([...items, ...route.conditions, ...(items.length || route.conditions?.length ? [] : route.blockers)]).slice(0, 3);
+}
+
+function insightCard(title, items, className = '') {
+  return `<section class="insight-card ${className}"><h3>${escapeHtml(title)}</h3><ul>${items.map((item) => `<li>${escapeHtml(userFacingText(item))}</li>`).join('')}</ul></section>`;
 }
 
 function renderRouteTable(routes) {
-  return `
-    <details class="route-details">
-      <summary>Как оценены все шесть маршрутов</summary>
-      <div class="route-list">
-        ${routes.map((route) => `
-          <article class="route-row">
-            <div>
-              <b>${escapeHtml(route.routeName)}</b>
-              <span>${route.thresholdEur == null ? 'Порог определяется индивидуально' : `Семейный порог: ${currency(route.thresholdEur, 'EUR')}/мес`}</span>
-            </div>
-            <span class="status ${statusClass(route.routeStatus)}">${escapeHtml(route.statusLabel)}</span>
-          </article>
-        `).join('')}
-      </div>
-    </details>`;
+  return `<details class="details-bar"><summary>⚖ Сравнить все варианты легализации</summary><div class="route-list">${routes.map((route) => `
+    <article class="route-row"><div><b>${escapeHtml(route.routeName)}</b><small>${route.thresholdEur == null ? 'Необходимый доход определяется индивидуально' : `Необходимый доход для семьи: ${currency(route.thresholdEur, 'EUR')}/мес`}</small></div><span class="status-pill ${statusClass(route.routeStatus)}">${escapeHtml(route.statusLabel)}</span></article>
+  `).join('')}</div></details>`;
 }
 
-function renderCities(cities, budgetUsd) {
-  if (!cities.length) {
-    return '<section class="result-section"><h3>Города</h3><p>Города нужного размера в пилотном наборе не найдены.</p></section>';
-  }
-  return `
-    <section class="result-section">
-      <h3>Города</h3>
-      <div class="city-list">
-        ${cities.map((city, index) => `
-          <article class="city-card ${index === 0 ? 'recommended' : ''}">
-            <div><b>${escapeHtml(city.cityName)}</b>${index === 0 ? '<span>Рекомендуемый из исследованных</span>' : ''}</div>
-            <strong>${currency(city.costUsd)}/мес</strong>
-            <p>${budgetUsd > 0 ? `Бюджет: ${city.budgetFit === 'MEETS' ? 'проходит' : 'не проходит'}` : 'Бюджет не задан'} · ${escapeHtml(city.climate)} · ${escapeHtml(city.airport)}</p>
-            ${city.missing.length ? `<small>${escapeHtml(city.missing.join(' '))}</small>` : ''}
-          </article>
-        `).join('')}
-      </div>
-    </section>`;
+function renderCities(calculation, isUnsuitable, canRecommend) {
+  const cities = calculation.cities.slice(0, 3);
+  const title = isUnsuitable ? 'Практическое сравнение городов' : 'Города для жизни';
+  const subtitle = isUnsuitable ? 'Эти данные пригодятся, если условия легализации изменятся.' : 'Сравнение бюджета по исследованным городам.';
+  return `<div class="section-title-row"><div><h3>${title}</h3><p>${subtitle}</p></div></div><div class="city-grid">${cities.map((city, index) => `
+    <article class="city-card ${canRecommend && index === 0 ? 'recommended' : ''}">${canRecommend && index === 0 ? '<span class="recommend-badge">Рекомендуем</span>' : ''}${isUnsuitable && index === 0 ? '<span class="availability-badge">Самый доступный из исследованных городов</span>' : ''}<h4>${escapeHtml(city.cityName)}</h4><p>${escapeHtml(CITY_DESCRIPTIONS[city.cityName] || 'Исследованный город с доступной оценкой бюджета.')}</p><strong>${currency(city.costUsd)}/мес</strong><small>${city.budgetFit === 'MEETS' ? 'Ваш бюджет проходит' : 'Бюджет требует пересмотра'}</small></article>
+  `).join('')}</div>`;
+}
+
+function sourceAuthority(source) {
+  const name = `${source.title} ${source.authority_name}`.toLowerCase();
+  if (name.includes('boletín') || name.includes('boe')) return 'BOE';
+  if (name.includes('inclusión') || name.includes('migraciones')) return 'Ministerio de Inclusión';
+  if (name.includes('tributaria')) return 'Agencia Tributaria';
+  if (name.includes('numbeo')) return 'Numbeo';
+  return source.authority_name || 'Официальный источник';
 }
 
 function renderSources(sources) {
-  return `
-    <section class="result-section">
-      <h3>Источники результата</h3>
-      <div class="source-list">
-        ${sources.map((source) => `
-          <a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">
-            <b>${escapeHtml(source.title)}</b>
-            <span>${escapeHtml(source.authority_name)} · проверено ${escapeHtml(source.accessed_at)}</span>
-          </a>
-        `).join('')}
-      </div>
-    </section>`;
+  return `<div class="section-title-row"><div><h3>На чём основан результат</h3><p>Ключевые официальные и исследовательские источники.</p></div></div><div class="source-grid">${sources.slice(0, 5).map((source) => `
+    <a class="source-card" href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer"><b>${escapeHtml(sourceAuthority(source))}</b><span>${escapeHtml(source.title)}</span></a>
+  `).join('')}</div>`;
 }
 
 function renderResult(calculation) {
   const route = calculation.bestRoute;
   if (!route) {
-    resultRoot.innerHTML = '<div class="empty"><b>Расчёт не выполнен</b><p>В данных нет доступных маршрутов.</p></div>';
+    resultRoot.innerHTML = '<div class="loading-state"><b>Расчёт не выполнен</b><p>В данных не найден доступный вариант легализации.</p></div>';
     return;
   }
-
+  const status = route.routeStatus;
+  const isUnsuitable = status === 'UNSUITABLE';
+  const isPositive = ['SUITABLE', 'SUITABLE_WITH_CONDITIONS', 'PRELIMINARY_SUITABLE'].includes(status);
+  const isInsufficient = status === 'INSUFFICIENT_COUNTRY_DATA';
+  const isReview = status === 'INDIVIDUAL_REVIEW_REQUIRED';
+  const why = friendlyWhy(calculation);
+  const icon = statusIcon(route.routeStatus);
+  const resultTitles = {
+    SUITABLE: 'Испания подходит по вашим условиям',
+    SUITABLE_WITH_CONDITIONS: 'Испания подходит с условиями',
+    PRELIMINARY_SUITABLE: 'Испания предварительно подходит',
+    UNSUITABLE: 'Испания не подходит по текущим условиям',
+    INSUFFICIENT_COUNTRY_DATA: 'Для точного результата пока недостаточно данных',
+    INDIVIDUAL_REVIEW_REQUIRED: 'Нужна индивидуальная проверка',
+  };
+  const resultTitle = resultTitles[status] || calculation.country.groupLabel;
+  const resultSubtitle = isUnsuitable
+    ? 'Ни один из проверенных вариантов легализации сейчас не проходит полностью.'
+    : null;
+  const variantLabel = isUnsuitable ? 'Наиболее близкий вариант' : 'Подходящий вариант иммиграции';
+  const longTermTitle = isUnsuitable ? 'Перспективы при выполнении условий' : 'ПМЖ и гражданство';
+  let insightCards = '';
+  if (status === 'SUITABLE') {
+    insightCards = insightCard('Почему подходит', why, 'good');
+  } else if (status === 'SUITABLE_WITH_CONDITIONS') {
+    insightCards = `${insightCard('Почему подходит', why, 'good')}${insightCard('Что нужно выполнить', unique([...route.conditions, ...calculation.practicalMissing]), 'warning')}`;
+  } else if (status === 'PRELIMINARY_SUITABLE') {
+    insightCards = `${insightCard('Почему подходит', why, 'good')}${insightCard('Что ещё нужно подтвердить', unique([...route.preliminary, ...route.missing, ...calculation.practicalMissing]), 'warning')}`;
+  } else if (isUnsuitable) {
+    insightCards = `${insightCard('Почему не подходит', route.blockers, 'danger')}${insightCard('Что должно измениться', changeRequirements(route), 'warning')}`;
+  } else if (isInsufficient) {
+    insightCards = `${insightCard('Что уже известно', knownFacts(route), 'known')}${insightCard('Что ещё нужно уточнить', unique([...route.missing, ...calculation.practicalMissing]), 'warning')}`;
+  } else if (isReview) {
+    insightCards = insightCard('Что требует индивидуальной проверки', unique([...route.review, ...calculation.practicalMissing]), 'information');
+  }
   resultRoot.innerHTML = `
-    <article class="result-card">
-      <div class="result-head">
-        <div>
-          <span class="eyebrow">Испания · пакет ${escapeHtml(calculation.schemaVersion)}</span>
-          <h2>${escapeHtml(calculation.country.groupLabel)}</h2>
-          <p>Лучший маршрут из шести: <b>${escapeHtml(route.routeName)}</b></p>
-        </div>
-        <span class="status large ${statusClass(route.routeStatus)}">${escapeHtml(STATUS_LABELS_RU[route.routeStatus])}</span>
-      </div>
+    <div class="result-head">
+      <div class="result-heading"><span class="result-icon ${icon.className}" aria-hidden="true">${icon.symbol}</span><div><h2>${escapeHtml(resultTitle)}</h2>${resultSubtitle ? `<p class="result-subtitle">${escapeHtml(resultSubtitle)}</p>` : ''}<p>${variantLabel}: <b>${escapeHtml(route.routeName)}</b></p></div></div>
+      <span class="status-pill ${statusClass(route.routeStatus)}">${escapeHtml(STATUS_LABELS_RU[route.routeStatus])}</span>
+    </div>
+    <div class="kpi-grid ${isPositive ? '' : 'three'}">
+      <div class="kpi"><span>Доход после пересчёта</span><b>${currency(route.incomeEur, 'EUR')}</b></div>
+      <div class="kpi"><span>Необходимый доход</span><b>${route.thresholdEur == null ? 'Индивидуально' : currency(route.thresholdEur, 'EUR')}</b></div>
+      <div class="kpi"><span>Состав семьи</span><b>${calculation.profile.adults} ${calculation.profile.adults === 1 ? 'взрослый' : 'взрослых'}</b></div>
+      ${isPositive ? `<div class="kpi"><span>Рекомендуемый город</span><b>${escapeHtml(calculation.recommendedCity?.cityName || 'Не выбран')}</b></div>` : ''}
+    </div>
+    <div class="insight-grid">
+      ${insightCards}
+      <section class="insight-card"><h3>${longTermTitle}</h3><div class="long-term-list"><div>◇ ПМЖ: через ${escapeHtml(route.longTerm?.years_to_pr ?? '—')} лет</div><div>◎ Гражданство: обычно через ${escapeHtml(route.longTerm?.nominal_years_to_citizenship ?? '—')} лет</div><div>文 Испанский: ${escapeHtml(route.longTerm?.required_language_level || 'требует проверки')}</div></div></section>
+    </div>
+    ${renderCities(calculation, isUnsuitable, isPositive)}
+    ${renderRouteTable(calculation.routes)}
+    ${renderSources(calculation.sources)}
+    <p class="result-note">Результат является предварительной оценкой и не заменяет проверку документов и актуальных требований перед подачей.</p>
+  `;
+}
 
-      <div class="key-grid">
-        <div><span>Доход после пересчёта</span><b>${currency(route.incomeEur, 'EUR')}</b></div>
-        <div><span>Требование маршрута</span><b>${route.thresholdEur == null ? 'Индивидуально' : currency(route.thresholdEur, 'EUR')}</b></div>
-        <div><span>Гражданство подачи</span><b>${escapeHtml(route.applicationNationality)}</b></div>
-        <div><span>Город</span><b>${escapeHtml(calculation.recommendedCity?.cityName || 'Не выбран')}</b></div>
-      </div>
+function switchToResult(calculation) {
+  lastCalculation = calculation;
+  renderResult(calculation);
+  renderSummary($('#resultProfileSummary'), calculation.profile, true);
+  questionnaireView.hidden = true;
+  resultView.hidden = false;
+  $('#heroTitle').innerHTML = 'Подходит ли вам Испания?';
+  $('#heroSubtitle').textContent = 'Мы сравнили доступные варианты легализации и отдельно оценили бюджет, города, семью и долгосрочные цели.';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
-      ${list('Подтверждённые препятствия', route.blockers, 'danger')}
-      ${list('Условия', route.conditions, 'warning')}
-      ${list('Каких данных не хватает', [...route.missing, ...calculation.practicalMissing], 'review-box')}
-      ${list('Нужна индивидуальная проверка', route.review, 'review-box')}
-      ${list('Какие ответы нужно уточнить', route.preliminary, 'warning')}
+function switchToQuestionnaire() {
+  resultView.hidden = true;
+  questionnaireView.hidden = false;
+  $('#heroTitle').textContent = 'Подберём страну для иммиграции';
+  $('#heroSubtitle').textContent = 'Сравним способы получить ВНЖ, требования к доходу, условия для семьи и перспективы ПМЖ или гражданства.';
+  showStep(1);
+}
 
-      <section class="result-section two-columns">
-        <div>
-          <h3>ПМЖ и гражданство</h3>
-          <p>ПМЖ: ${escapeHtml(route.longTerm?.years_to_pr ?? 'требует проверки')} лет.</p>
-          <p>Гражданство: ${escapeHtml(route.longTerm?.nominal_years_to_citizenship ?? 'требует проверки')} лет по общему правилу.</p>
-          <p>Язык: ${escapeHtml(route.longTerm?.required_language_level || 'не указан')}.</p>
-        </div>
-        <div>
-          <h3>Работа и семья</h3>
-          <p>${escapeHtml(route.work?.local_work_rights || 'Права на работу требуют проверки.')}</p>
-          <p>${escapeHtml(route.family?.dependent_work_rights || 'Семейные рабочие права требуют проверки.')}</p>
-        </div>
-      </section>
+function draftData() {
+  const profile = readProfile();
+  return { ...profile, legalResidence: profile.legalResidence ? 'YES' : 'NO' };
+}
 
-      ${renderCities(calculation.cities, calculation.profile.monthlyBudgetUsd)}
-      ${renderRouteTable(calculation.routes)}
-      ${renderSources(calculation.sources)}
+function restoreDraft() {
+  try {
+    const draft = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (!draft) return;
+    setRadioValue('plannedBasis', draft.plannedBasis);
+    setRadioValue('goal', draft.goal);
+    setRadioValue('languageReadiness', draft.languageReadiness);
+    ['currentLocation','monthlyIncomeUsd','eurUsdRate','bankCountry','socialSecurityPlan','relationshipType','monthsPerYear','keepRuCitizenship','monthlyBudgetUsd','citySize','pet','dogBreed'].forEach((id) => { if (draft[id] != null && $(`#${id}`)) $(`#${id}`).value = draft[id]; });
+    $('#legalResidence').value = draft.legalResidence === true ? 'YES' : draft.legalResidence === false ? 'NO' : draft.legalResidence;
+    ['sameSexFamily','needsFamilyVisa','schoolNeeded','medicineRequired'].forEach((id) => { if (draft[id] != null) $(`#${id}`).checked = Boolean(draft[id]); });
+    setStepper('adults', Number(draft.adults || 1));
+    setStepper('children', Number(draft.children || 0));
+    syncConditionalFields();
+  } catch { localStorage.removeItem(STORAGE_KEY); }
+}
 
-      <p class="data-note">Статус исследования: ${escapeHtml(calculation.country.researchStatus)} · уверенность ${escapeHtml(calculation.country.confidence)}. Результат не заменяет проверку документов и актуальных правил перед подачей.</p>
-    </article>`;
+function showToast(message) {
+  const toast = $('#toast');
+  toast.textContent = message;
+  toast.hidden = false;
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => { toast.hidden = true; }, 2600);
+}
+
+function setStepper(id, value) {
+  const limits = id === 'adults' ? [1, 2] : [0, 3];
+  const safe = Math.max(limits[0], Math.min(limits[1], value));
+  $(`#${id}`).value = String(safe);
+  $(`#${id}Output`).textContent = String(safe);
+}
+
+function syncConditionalFields() {
+  $('#relationshipBlock').hidden = Number(get('adults')) < 2;
+  $('#dogBreedField').hidden = get('pet') !== 'DOG';
 }
 
 async function init() {
+  restoreDraft();
+  syncConditionalFields();
+  updateProfileSummary();
+  showStep(1, false);
   try {
     const response = await fetch('../data/spain-research-v2.2.json');
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     spainData = await response.json();
     submitButton.disabled = false;
-    form.requestSubmit();
   } catch (error) {
-    resultRoot.innerHTML = `<div class="empty error"><b>Не удалось загрузить данные Испании</b><p>${escapeHtml(error.message)}</p></div>`;
+    $('#formError').hidden = false;
+    $('#formError').textContent = `Не удалось загрузить данные Испании: ${error.message}`;
   }
 }
 
+nextButton.addEventListener('click', () => { if (validateStep(currentStep)) { showStep(currentStep + 1); updateProfileSummary(); } });
+prevButton.addEventListener('click', () => showStep(currentStep - 1));
+form.addEventListener('input', () => { syncConditionalFields(); updateProfileSummary(); });
+form.addEventListener('change', () => { syncConditionalFields(); updateProfileSummary(); });
 form.addEventListener('submit', (event) => {
   event.preventDefault();
-  if (!spainData) return;
-  try {
-    renderResult(calculateSpain(readProfile(), spainData));
-    if (window.innerWidth < 900) resultRoot.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  } catch (error) {
-    resultRoot.innerHTML = `<div class="empty error"><b>Ошибка расчёта</b><p>${escapeHtml(error.message)}</p></div>`;
-  }
+  if (!spainData || !validateStep(currentStep)) return;
+  try { switchToResult(calculateSpain(readProfile(), spainData)); }
+  catch (error) { $('#formError').hidden = false; $('#formError').textContent = `Ошибка расчёта: ${error.message}`; }
 });
 
-document.querySelector('#pet').addEventListener('change', (event) => {
-  document.querySelector('#dogBreedField').hidden = event.target.value !== 'DOG';
-});
+$$('[data-stepper]').forEach((stepper) => stepper.addEventListener('click', (event) => {
+  const button = event.target.closest('button');
+  if (!button) return;
+  const id = stepper.dataset.stepper;
+  const delta = button.dataset.action === 'plus' ? 1 : -1;
+  setStepper(id, Number(get(id)) + delta);
+  syncConditionalFields();
+  updateProfileSummary();
+}));
 
-document.querySelector('#adults').addEventListener('change', (event) => {
-  const hasPartner = Number(event.target.value) > 1;
-  document.querySelector('#relationshipBlock').hidden = !hasPartner;
-});
+$('#saveDraft').addEventListener('click', () => { localStorage.setItem(STORAGE_KEY, JSON.stringify(draftData())); showToast('Анкета сохранена в этом браузере'); });
+$('#saveResult').addEventListener('click', () => { if (lastCalculation) { localStorage.setItem(RESULT_KEY, JSON.stringify({ savedAt: new Date().toISOString(), profile: readProfile(), calculation: lastCalculation })); showToast('Результат сохранён в этом браузере'); } });
+$('#editProfile').addEventListener('click', switchToQuestionnaire);
 
 init();
