@@ -10,6 +10,15 @@ export class CalculationContextError extends Error {
   }
 }
 
+export class ProfileContractError extends Error {
+  constructor(message, details = {}) {
+    super(message);
+    this.name = 'ProfileContractError';
+    this.code = 'PROFILE_INCOMPLETE';
+    this.details = details;
+  }
+}
+
 const requireMethod = (adapter, name) => {
   if (typeof adapter?.[name] !== 'function') throw new TypeError(`countryAdapter.${name} must be a function`);
 };
@@ -21,14 +30,28 @@ export function calculateCountry(profile, countryPackage, calculationContext, co
   for (const name of ['normalizeProfile', 'buildIndexes', 'evaluateRoute', 'evaluatePractical', 'determineCountryGroup', 'collectSources']) requireMethod(countryAdapter, name);
 
   countryAdapter.validateContext?.(profile, countryPackage, calculationContext);
+  if (!Array.isArray(profile.citizenships) || profile.citizenships.length === 0) {
+    throw new ProfileContractError('Строгий профиль должен содержать хотя бы одно гражданство.', { field: 'citizenships' });
+  }
   const normalizedProfile = countryAdapter.normalizeProfile(profile, calculationContext);
   const indexes = countryAdapter.buildIndexes(countryPackage);
-  const routes = (countryPackage.routes || []).map((route) =>
-    countryAdapter.evaluateRoute(route, indexes, normalizedProfile, calculationContext)
-  );
+  const routes = (countryPackage.routes || []).map((route) => {
+    const citizenshipVariants = normalizedProfile.citizenships.map((applicationNationality) =>
+      countryAdapter.evaluateRoute(route, indexes, {
+        ...normalizedProfile,
+        applicationNationality,
+      }, calculationContext)
+    );
+    const bestVariant = selectBestRoute(citizenshipVariants);
+    return {
+      ...bestVariant,
+      citizenshipVariants,
+      variants: citizenshipVariants,
+    };
+  });
   const bestRoute = selectBestRoute(routes);
   const practicalResult = countryAdapter.evaluatePractical(countryPackage, normalizedProfile, calculationContext);
-  const group = countryAdapter.determineCountryGroup(bestRoute, practicalResult, normalizedProfile);
+  const group = countryAdapter.determineCountryGroup(bestRoute, practicalResult, normalizedProfile, routes);
 
   return {
     schemaVersion: countryPackage.schema_version,

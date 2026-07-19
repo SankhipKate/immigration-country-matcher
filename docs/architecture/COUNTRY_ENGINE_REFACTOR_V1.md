@@ -200,8 +200,8 @@ calculateCountry(profile, countryPackage, context)
 Приоритет определяется не суммой баллов, а подтверждённой природой результата:
 
 1. `UNSUITABLE` — есть подтверждённый жёсткий блокер;
-2. `INSUFFICIENT_COUNTRY_DATA` — отсутствует факт страны, способный изменить юридический вывод;
-3. `INDIVIDUAL_REVIEW_REQUIRED` — результат зависит от индивидуальных документов или истории;
+2. `INDIVIDUAL_REVIEW_REQUIRED` — результат зависит от индивидуальных документов или истории;
+3. `INSUFFICIENT_COUNTRY_DATA` — отсутствует факт страны, способный изменить юридический вывод;
 4. `PRELIMINARY_SUITABLE` — не хватает ответа пользователя;
 5. `SUITABLE_WITH_CONDITIONS` — юридически доступно после известных действий;
 6. `SUITABLE` — подтверждённых препятствий и обязательных нерешённых условий нет.
@@ -225,8 +225,8 @@ calculateCountry(profile, countryPackage, context)
    - `SUITABLE`;
    - `SUITABLE_WITH_CONDITIONS`;
    - `PRELIMINARY_SUITABLE`;
-   - `INDIVIDUAL_REVIEW_REQUIRED`;
    - `INSUFFICIENT_COUNTRY_DATA`;
+   - `INDIVIDUAL_REVIEW_REQUIRED`;
    - `UNSUITABLE`;
 2. закрывает ли вариант обязательную долгосрочную цель;
 3. доступен ли хотя бы один приемлемый способ подачи;

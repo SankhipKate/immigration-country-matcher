@@ -2,6 +2,7 @@ import {
   calculateSpain,
   STATUS_LABELS_RU,
 } from '../js/spain-calculator.js';
+import { loadCalculationContext } from './fx-context.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -18,6 +19,7 @@ const STORAGE_KEY = 'immigration-matcher-spain-draft-v07';
 const RESULT_KEY = 'immigration-matcher-spain-result-v06';
 let currentStep = 1;
 let spainData;
+let calculationContext;
 let lastCalculation;
 
 const currency = (value, code = 'USD', digits = 0) =>
@@ -70,9 +72,7 @@ function readProfile() {
     currentLocation: get('currentLocation'),
     legalResidence: get('legalResidence') === '' ? null : get('legalResidence') === 'YES',
     monthlyIncomeUsd: numberValue('monthlyIncomeUsd'),
-    eurUsdRate: numberValue('eurUsdRate'),
     bankCountry: get('bankCountry'),
-    socialSecurityPlan: get('socialSecurityPlan'),
     adults: numberValue('adults'),
     children: numberValue('children'),
     relationshipType: get('relationshipType'),
@@ -125,21 +125,21 @@ function updateProfileSummary() {
 
 function hasMeaningfulFormData() {
   return Boolean(radioValue('plannedBasis') || radioValue('goal') || radioValue('languageReadiness') ||
-    ['currentLocation','legalResidence','monthlyIncomeUsd','eurUsdRate','bankCountry','socialSecurityPlan','adults','children','relationshipType','monthsPerYear','keepRuCitizenship','monthlyBudgetUsd','citySize','pet','dogBreed'].some((id) => specified(get(id))) ||
+    ['currentLocation','legalResidence','monthlyIncomeUsd','bankCountry','adults','children','relationshipType','monthsPerYear','keepRuCitizenship','monthlyBudgetUsd','citySize','pet','dogBreed'].some((id) => specified(get(id))) ||
     ['sameSexFamily','needsFamilyVisa','schoolNeeded','medicineRequired'].some(checked));
 }
 
 function isFormComplete() {
   const profile = readProfile();
   return Boolean(profile.plannedBasis && profile.currentLocation && profile.legalResidence !== null &&
-    profile.monthlyIncomeUsd > 0 && profile.eurUsdRate > 0 && profile.bankCountry && profile.socialSecurityPlan &&
+    profile.monthlyIncomeUsd > 0 && profile.bankCountry &&
     profile.adults >= 1 && profile.children >= 0 && profile.goal && specified(profile.monthsPerYear) &&
     profile.languageReadiness && profile.keepRuCitizenship && profile.monthlyBudgetUsd > 0 && profile.citySize && profile.pet &&
     (profile.adults < 2 || profile.relationshipType));
 }
 
 function updateActionAvailability() {
-  submitButton.disabled = !spainData || !isFormComplete();
+  submitButton.disabled = !spainData || !calculationContext || !isFormComplete();
 }
 
 function renderReview(profile) {
@@ -176,7 +176,7 @@ function validateStep(step) {
   const errors = [];
   if (step === 1 && (!specified(get('adults')) || !specified(get('children')))) errors.push('Укажите состав семьи.');
   if (step === 2 && (!radioValue('plannedBasis') || !get('currentLocation') || !get('legalResidence'))) errors.push('Выберите основание для ВНЖ и место подачи.');
-  if (step === 3 && (numberValue('monthlyIncomeUsd') <= 0 || numberValue('eurUsdRate') <= 0 || !get('bankCountry') || !get('socialSecurityPlan'))) errors.push('Заполните данные о доходе и подтверждении.');
+  if (step === 3 && (numberValue('monthlyIncomeUsd') <= 0 || !get('bankCountry'))) errors.push('Заполните данные о доходе и подтверждении.');
   if (step === 4 && (!radioValue('goal') || !specified(get('monthsPerYear')) || !radioValue('languageReadiness') || !get('keepRuCitizenship'))) errors.push('Заполните долгосрочную цель.');
   if (step === 5 && (numberValue('monthlyBudgetUsd') <= 0 || !get('citySize') || !get('pet'))) errors.push('Заполните бюджет и практические условия.');
   const root = $('#formError');
@@ -387,7 +387,7 @@ function restoreDraft() {
     setRadioValue('plannedBasis', draft.plannedBasis);
     setRadioValue('goal', draft.goal);
     setRadioValue('languageReadiness', draft.languageReadiness);
-    ['currentLocation','monthlyIncomeUsd','eurUsdRate','bankCountry','socialSecurityPlan','relationshipType','monthsPerYear','keepRuCitizenship','monthlyBudgetUsd','citySize','pet','dogBreed'].forEach((id) => { if (draft[id] != null && $(`#${id}`)) $(`#${id}`).value = draft[id]; });
+    ['currentLocation','monthlyIncomeUsd','bankCountry','relationshipType','monthsPerYear','keepRuCitizenship','monthlyBudgetUsd','citySize','pet','dogBreed'].forEach((id) => { if (draft[id] != null && $(`#${id}`)) $(`#${id}`).value = draft[id]; });
     $('#legalResidence').value = draft.legalResidence === true ? 'YES' : draft.legalResidence === false ? 'NO' : draft.legalResidence;
     ['sameSexFamily','needsFamilyVisa','schoolNeeded','medicineRequired'].forEach((id) => { if (draft[id] != null) $(`#${id}`).checked = Boolean(draft[id]); });
     setStepper('adults', draft.adults);
@@ -449,10 +449,14 @@ async function init() {
     const response = await fetch('../data/spain-research-v2.2.json');
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     spainData = await response.json();
+    calculationContext = await loadCalculationContext();
     updateActionAvailability();
   } catch (error) {
     $('#formError').hidden = false;
-    $('#formError').textContent = `Не удалось загрузить данные Испании: ${error.message}`;
+    $('#formError').dataset.code = error.code || 'DATA_LOAD_FAILED';
+    $('#formError').textContent = error.code === 'CALCULATION_CONTEXT_INCOMPLETE'
+      ? 'Расчёт временно недоступен: не удалось получить актуальный системный курс валют. Попробуйте позже.'
+      : `Не удалось загрузить данные Испании: ${error.message}`;
   }
 }
 
@@ -462,8 +466,8 @@ form.addEventListener('input', () => { syncConditionalFields(); updateProfileSum
 form.addEventListener('change', () => { syncConditionalFields(); updateProfileSummary(); updateActionAvailability(); persistDraft(); });
 form.addEventListener('submit', (event) => {
   event.preventDefault();
-  if (!spainData || !validateStep(currentStep)) return;
-  try { switchToResult(calculateSpain(readProfile(), spainData)); }
+  if (!spainData || !calculationContext || !validateStep(currentStep)) return;
+  try { switchToResult(calculateSpain(readProfile(), spainData, calculationContext)); }
   catch (error) { $('#formError').hidden = false; $('#formError').textContent = `Ошибка расчёта: ${error.message}`; }
 });
 
