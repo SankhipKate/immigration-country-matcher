@@ -1,4 +1,6 @@
-import { calculateSpain, STATUS_LABELS_RU } from '../js/spain-calculator.js';
+import { STATUS_LABELS_RU } from '../js/spain-calculator.js';
+import { calculateCountries } from '../js/engine/calculate-countries.js';
+import { spainAdapter } from '../js/countries/spain-adapter.js';
 import { loadCalculationContext } from '../pilot/fx-context.js';
 import { countryOptions, parseCountryCode } from './countries.js';
 import { buildUserProfile, collectEligibleFollowUps, describeIncomeRequirement, describeResultIntro, validateAgainstSchema, validateUserProfile } from './profile.js';
@@ -11,6 +13,7 @@ const TOTAL_STEPS = steps.length;
 const DRAFT_KEY = 'immigration-matcher-universal-draft-v1';
 let currentStep = 1;
 let spainData;
+let uruguayData;
 let calculationContext;
 let currentProfile;
 let profileSchema;
@@ -145,31 +148,42 @@ function renderReview(p) {
 
 function statusClass(status) { return status === 'SUITABLE' ? 'positive' : status === 'UNSUITABLE' ? 'negative' : 'conditional'; }
 
-function routeCard(route, main = false) {
+function routeCard(route, countryName, main = false) {
   const incomeTypeBlocked = route.incomeTypeFit === 'DOES_NOT_MEET';
   const requirement = describeIncomeRequirement(route, currency);
   const visibleBlockers = (route.blockers || []).filter((item) => !incomeTypeBlocked || !item.includes('Тип дохода несовместим'));
   const reasons = [...(incomeTypeBlocked ? [requirement] : []), ...visibleBlockers];
   const reasonsBlock = reasons.length ? `<div class="route-reasons"><h4>${reasons.length > 1 ? 'Почему не подходит — несколько независимых причин' : 'Почему не подходит'}</h4><ul>${reasons.map((item) => `<li>${html(item)}</li>`).join('')}</ul></div>` : '';
   const finance = incomeTypeBlocked ? '' : `<p class="financial-rule">${html(requirement)}</p>`;
-  return `<article class="route-result ${main ? 'best' : ''}"><div><span class="status-pill ${statusClass(route.routeStatus)}">${html(STATUS_LABELS_RU[route.routeStatus])}</span><h3>${html(route.routeName)}</h3><p>Расчёт выполнен для Испании по гражданству РФ.</p></div>${finance}${reasonsBlock}</article>`;
+  return `<article class="route-result ${main ? 'best' : ''}"><div><span class="status-pill ${statusClass(route.routeStatus)}">${html(STATUS_LABELS_RU[route.routeStatus])}</span><h3>${html(route.routeName)}</h3><p>Расчёт выполнен для страны «${html(countryName)}» по гражданству РФ.</p></div>${finance}${reasonsBlock}</article>`;
 }
 
-function renderResult(calculation, changed = false) {
+function renderCountryResult(calculation, changed = false) {
   const best = calculation.bestRoute;
   const followUps = collectEligibleFollowUps(calculation);
   const children = calculation.profile.children?.length || 0;
   const family = `${calculation.profile.adults} ${calculation.profile.adults === 1 ? 'взрослый' : 'взрослых'}${children ? `, ${children} ${children === 1 ? 'ребёнок' : 'детей'}` : ''}`;
   const followUpHtml = followUps.length ? `<section class="follow-up-card"><h3>Нужно одно уточнение</h3><p>Оно относится только к варианту «${html(followUps[0].routeName)}» и может изменить предварительный статус.</p><label class="field"><span>Как планируете подтвердить участие в системе социального страхования Испании?</span><select id="socialSecurityPlan"><option value="">Не знаю</option><option value="REGISTER_IN_SPAIN">Зарегистрироваться в Испании</option><option value="FOREIGN_COVERAGE_CERTIFICATE">Использовать подтверждение из другой страны</option><option value="SELF_EMPLOYED_SPAIN">Оформиться как самостоятельный работник в Испании</option></select></label><button id="recalculate" class="primary-button" type="button">Уточнить результат</button></section>` : '';
   const { heading: resultHeading, routeLabel } = describeResultIntro(calculation.routes, changed);
+  const countryName = calculation.country.name;
+  const countryId = calculation.country.countryId;
+  const flag = countryId === 'ES' ? '🇪🇸' : countryId === 'UY' ? '🇺🇾' : '🌍';
   const thresholdLabel = best?.incomeTypeFit === 'DOES_NOT_MEET' ? 'Финансовый порог' : 'Необходимый доход';
   const thresholdValue = best?.incomeTypeFit === 'DOES_NOT_MEET' ? 'Не оценивается: тип дохода не подходит' : best?.thresholdEur == null ? 'Нужен расчёт по документам' : currency(best.thresholdEur, 'EUR');
-  $('#result').innerHTML = `<div class="country-result-banner" data-country-id="ES"><span class="country-flag" aria-hidden="true">🇪🇸</span><div><small>Страна расчёта</small><h2>Испания</h2><p>Все показанные ниже варианты относятся только к Испании.</p></div></div><div class="result-head"><div><h2>${resultHeading}</h2><p>${routeLabel}: <b>${html(best?.routeName || 'не определён')}</b></p></div><span class="status-pill ${statusClass(best?.routeStatus)}">${html(STATUS_LABELS_RU[best?.routeStatus] || 'Требует проверки')}</span></div>
+  return `<section class="country-comparison"><div class="country-result-banner" data-country-id="${html(countryId)}"><span class="country-flag" aria-hidden="true">${flag}</span><div><small>Страна расчёта</small><h2>${html(countryName)}</h2><p>Все показанные ниже варианты относятся только к стране «${html(countryName)}».</p></div></div><div class="result-head"><div><h2>${resultHeading}</h2><p>${routeLabel}: <b>${html(best?.routeName || 'не определён')}</b></p></div><span class="status-pill ${statusClass(best?.routeStatus)}">${html(STATUS_LABELS_RU[best?.routeStatus] || 'Требует проверки')}</span></div>
     <div class="kpi-grid three"><div class="kpi"><span>Состав семьи</span><b>${html(family)}</b></div><div class="kpi"><span>Подтверждаемый доход после пересчёта</span><b>${best?.incomeEur == null ? 'Не рассчитан' : currency(best.incomeEur, 'EUR')}</b></div><div class="kpi"><span>${thresholdLabel}</span><b>${thresholdValue}</b></div></div>
-    ${best ? routeCard(best, true) : ''}${followUpHtml}<section><div class="section-title-row"><div><h3>Другие проверенные варианты</h3><p>Каждый вариант проверен отдельно по вашим фактическим ответам.</p></div></div><div class="alternative-routes">${calculation.routes.filter((route) => route.routeId !== best?.routeId).map((route) => routeCard(route)).join('')}</div></section>
+    ${best ? routeCard(best, countryName, true) : ''}${followUpHtml}<section><div class="section-title-row"><div><h3>Другие проверенные варианты</h3><p>Каждый вариант проверен отдельно по вашим фактическим ответам.</p></div></div><div class="alternative-routes">${calculation.routes.filter((route) => route.routeId !== best?.routeId).map((route) => routeCard(route, countryName)).join('')}</div></section>
     <section><div class="section-title-row"><div><h3>Практический семейный бюджет</h3><p>Обычные расходы семьи; школа учитывается отдельно, только если она нужна.</p></div></div>${calculation.recommendedCity ? `<div class="city-card recommended"><h4>${html(calculation.recommendedCity.cityName)}</h4><strong>${currency(calculation.recommendedCity.costUsd)}/мес</strong></div>` : '<p>Город не определён.</p>'}</section>
-    <p class="result-note">Расчёт: ${html(calculation.calculatedAt?.slice(0, 10))}. Курс валют: ${html(calculationContext.fx.as_of?.slice(0, 10))}, источник ${html(calculationContext.fx.source)}. Результат предварительный и не является юридическим обещанием.</p>`;
-  if (followUps.length) $('#recalculate').addEventListener('click', recalculateWithFollowUp);
+    <p class="result-note">Исследование страны проверено: ${html(calculation.country.researchStatus || 'статус не указан')}. Расчёт: ${html(calculation.calculatedAt?.slice(0, 10))}. Курс валют: ${html(calculationContext.fx.as_of?.slice(0, 10))}, источник ${html(calculationContext.fx.source)}. Результат предварительный и не является юридическим обещанием.</p></section>`;
+}
+
+function calculateAllCountries() {
+  return calculateCountries(currentProfile, [spainData, uruguayData], calculationContext, () => spainAdapter);
+}
+
+function renderResult(calculation, changed = false) {
+  $('#result').innerHTML = `<div class="comparison-intro"><h2>Сравнение стран</h2><p>Одна анкета независимо проверена для Испании и Уругвая.</p></div>${calculation.results.map((country) => renderCountryResult(country, changed)).join('')}`;
+  if ($('#recalculate')) $('#recalculate').addEventListener('click', recalculateWithFollowUp);
 }
 
 function switchToResult(calculation, changed = false) {
@@ -177,7 +191,7 @@ function switchToResult(calculation, changed = false) {
   $('#questionnaireView').hidden = true;
   $('#resultView').hidden = false;
   $('#heroTitle').textContent = 'Ваш результат';
-  $('#heroSubtitle').textContent = 'Мы независимо проверили все доступные варианты Испании и отдельно оценили семейные условия.';
+  $('#heroSubtitle').textContent = 'Мы независимо проверили варианты Испании и Уругвая и отдельно оценили семейные условия.';
   const p = currentProfile;
   $('#resultProfileSummary').innerHTML = `<div class="summary-row"><span>Гражданство</span><b>РФ</b></div><div class="summary-row"><span>Семья</span><b>${html(familyLabel(p))}</b></div>`;
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -187,7 +201,7 @@ function recalculateWithFollowUp() {
   const answer = value('socialSecurityPlan');
   if (!answer) { showToast('Выберите ответ или оставьте предварительный результат'); return; }
   currentProfile.route_specific_answers = { ...currentProfile.route_specific_answers, ES_DNV: { social_security_plan: answer } };
-  switchToResult(calculateSpain(currentProfile, spainData, calculationContext), true);
+  switchToResult(calculateAllCountries(), true);
 }
 
 function showToast(message) { const toast = $('#toast'); toast.textContent = message; toast.hidden = false; clearTimeout(showToast.timer); showToast.timer = setTimeout(() => { toast.hidden = true; }, 2600); }
@@ -235,13 +249,13 @@ form.addEventListener('change', () => { syncConditional(); renderProfileSummary(
 form.addEventListener('input', () => renderProfileSummary(profile()));
 form.addEventListener('submit', (event) => {
   event.preventDefault();
-  if (!validateStep(currentStep) || !spainData || !calculationContext) return;
+  if (!validateStep(currentStep) || !spainData || !uruguayData || !calculationContext) return;
   currentProfile = profile();
   const validation = validateUserProfile(currentProfile);
   if (!validation.valid) { $('#formError').hidden = false; $('#formError').textContent = validation.errors[0].message; return; }
   const schemaErrors = validateAgainstSchema(currentProfile, profileSchema);
   if (schemaErrors.length) { $('#formError').hidden = false; $('#formError').textContent = `Проверьте ответы: ${schemaErrors[0].message}`; return; }
-  try { switchToResult(calculateSpain(currentProfile, spainData, calculationContext)); }
+  try { switchToResult(calculateAllCountries()); }
   catch (error) { $('#formError').hidden = false; $('#formError').textContent = `Не удалось выполнить расчёт: ${error.message}`; }
 });
 $('#saveDraft').addEventListener('click', () => { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft())); showToast('Черновик сохранён в этом браузере'); });
@@ -251,9 +265,9 @@ $('#editProfile').addEventListener('click', () => { $('#resultView').hidden = tr
 async function init() {
   restoreDraft(); syncChildren(); syncConditional(); showStep(1, false);
   try {
-    const [dataResponse, schemaResponse] = await Promise.all([fetch('../data/spain-research-v2.2.json'), fetch('../data/schemas/user-profile-v1.schema.json')]);
-    if (!dataResponse.ok || !schemaResponse.ok) throw new Error(`HTTP ${dataResponse.status}/${schemaResponse.status}`);
-    [spainData, profileSchema] = await Promise.all([dataResponse.json(), schemaResponse.json()]);
+    const [spainResponse, uruguayResponse, schemaResponse] = await Promise.all([fetch('../data/spain-research-v2.2.json'), fetch('../data/uruguay-research-v2.2.json'), fetch('../data/schemas/user-profile-v1.schema.json')]);
+    if (!spainResponse.ok || !uruguayResponse.ok || !schemaResponse.ok) throw new Error(`HTTP ${spainResponse.status}/${uruguayResponse.status}/${schemaResponse.status}`);
+    [spainData, uruguayData, profileSchema] = await Promise.all([spainResponse.json(), uruguayResponse.json(), schemaResponse.json()]);
     calculationContext = await loadCalculationContext();
   } catch (error) {
     $('#formError').hidden = false;

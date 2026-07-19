@@ -176,7 +176,18 @@ function incomeEvaluation(route, indexes, profile, context) {
   const base = { incomeEur, requirementConversion };
   if (!profile.plannedBasis) return { ...base, checks: [outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'income_type_missing', 'Нужно указать основной тип дохода.', { field: 'income.primary.type' })], thresholdEur: null, incomeTypeFit: 'UNKNOWN', incomeFit: 'UNKNOWN' };
   if (!rule.incomeTypes.includes(incomeType)) return { ...base, checks: [outcome(ROUTE_STATUSES.UNSUITABLE, 'income_type_incompatible', 'Тип дохода несовместим с правилами этого маршрута.')], thresholdEur: null, incomeTypeFit: 'DOES_NOT_MEET', incomeFit: 'NOT_APPLICABLE' };
-  if (rule.individualReview) return { ...base, checks: [outcome(ROUTE_STATUSES.INDIVIDUAL_REVIEW_REQUIRED, 'business_case_review', 'Требуется индивидуальная оценка бизнес-плана и проекта.')], thresholdEur: null, incomeTypeFit: 'MEETS', incomeFit: 'UNKNOWN' };
+  if (rule.individualReview) {
+    const message = route.country_id === 'UY'
+      ? 'Фиксированный минимальный доход не установлен: достаточность и документы о средствах оцениваются индивидуально.'
+      : 'Требуется индивидуальная оценка бизнес-плана и проекта.';
+    return { ...base, checks: [outcome(ROUTE_STATUSES.INDIVIDUAL_REVIEW_REQUIRED, 'individual_income_review', message)], thresholdEur: null, incomeTypeFit: 'MEETS', incomeFit: 'UNKNOWN' };
+  }
+  if (rule.meansDeclaration) {
+    const checks = profile.monthlyIncomeUsd == null
+      ? [outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'income_missing', 'Нужно указать средства для проживания и подтвердить их декларацией.', { field: 'income.primary.amount' })]
+      : [outcome(ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS, 'means_declaration_required', 'Официальный фиксированный минимум не установлен; потребуется декларация о достаточных средствах.', { condition: 'Подать подписанную декларацию о наличии средств для проживания.' })];
+    return { ...base, checks, thresholdEur: null, incomeTypeFit: 'MEETS', incomeFit: profile.monthlyIncomeUsd == null ? 'UNKNOWN' : 'MEETS' };
+  }
   if (rule.missingSalaryThreshold) return { ...base, checks: [outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'hq_salary_missing', 'Официальный зарплатный порог 2026 ещё не внесён.')], thresholdEur: null, incomeTypeFit: 'MEETS', incomeFit: 'UNKNOWN' };
   const incomeRule = indexes.routeIncome.get(`${route.route_id}:${incomeType}`);
   if (!incomeRule) return { ...base, checks: [outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'income_rule_missing', 'Подтверждённое правило дохода отсутствует.')], thresholdEur: null, incomeTypeFit: 'MEETS', incomeFit: 'UNKNOWN' };
