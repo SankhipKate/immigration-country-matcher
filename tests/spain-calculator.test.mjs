@@ -5,6 +5,8 @@ import {
   calculateSpain,
   resolveStatusConflict,
   selectBestVariant,
+  STATUS_LABELS_RU,
+  COUNTRY_GROUP_LABELS_RU,
 } from '../js/spain-calculator.js';
 
 const data = JSON.parse(await readFile(new URL('../data/spain-research-v2.2.json', import.meta.url), 'utf8'));
@@ -43,8 +45,8 @@ test('conflict resolution chooses the strictest status inside one route', () => 
 
 test('best-variant selection uses a separate preference order', () => {
   const best = selectBestVariant([
-    { routeStatus: 'INSUFFICIENT_COUNTRY_DATA', selectionScore: 100 },
-    { routeStatus: 'SUITABLE_WITH_CONDITIONS', selectionScore: 10 },
+    { routeStatus: 'INSUFFICIENT_COUNTRY_DATA', scenarioAffinity: 1 },
+    { routeStatus: 'SUITABLE_WITH_CONDITIONS', scenarioAffinity: 0 },
   ]);
   assert.equal(best.routeStatus, 'SUITABLE_WITH_CONDITIONS');
 });
@@ -52,7 +54,7 @@ test('best-variant selection uses a separate preference order', () => {
 test('remote employee with sufficient converted income selects DNV', () => {
   const result = calculate({ plannedBasis: 'REMOTE_EMPLOYEE', monthlyIncomeUsd: 3200 });
   assert.equal(result.bestRoute.routeId, 'ES_DNV');
-  assert.equal(result.bestRoute.routeStatus, 'SUITABLE_WITH_CONDITIONS');
+  assert.equal(result.bestRoute.routeStatus, 'INSUFFICIENT_COUNTRY_DATA');
 });
 
 test('currency conversion prevents comparing USD directly with an EUR threshold', () => {
@@ -108,6 +110,29 @@ test('a family budget below city costs produces a practical mismatch group', () 
     schoolNeeded: true,
     monthlyBudgetUsd: 3000,
   });
-  assert.equal(result.bestRoute.routeStatus, 'SUITABLE_WITH_CONDITIONS');
+  assert.equal(result.bestRoute.routeStatus, 'INSUFFICIENT_COUNTRY_DATA');
   assert.equal(result.country.group, 'LEGAL_BUT_PRACTICALLY_UNSUITABLE');
+});
+
+test('all six Spain routes are independently evaluated', () => {
+  const result = calculate({ plannedBasis: 'PASSIVE_INCOME', monthlyIncomeUsd: 3200 });
+  assert.equal(result.routes.length, 6);
+  assert.equal(result.bestRoute.routeId, 'ES_NLV');
+  assert.ok(result.routes.every((route) => !Object.hasOwn(route, 'selection' + 'Score')));
+});
+
+test('family keeps adults and children as separate counts', () => {
+  const result = calculateSpain({ ...baseProfile, family: { adults_count: 2, children: [{ age_years: 13 }] }, plannedBasis: 'PASSIVE_INCOME', monthlyIncomeUsd: 5000 }, data);
+  assert.equal(result.profile.adults, 2);
+  assert.equal(result.profile.children, 1);
+});
+
+test('legacy wrapper re-exports public Russian labels', () => {
+  assert.equal(STATUS_LABELS_RU.SUITABLE, 'Подходит');
+  assert.equal(COUNTRY_GROUP_LABELS_RU.SUITABLE, 'Подходит');
+});
+
+test('canonical conflict and selection orders remain independent', () => {
+  assert.equal(resolveStatusConflict(['INSUFFICIENT_COUNTRY_DATA', 'INDIVIDUAL_REVIEW_REQUIRED']), 'INDIVIDUAL_REVIEW_REQUIRED');
+  assert.equal(selectBestVariant([{ routeId: 'review', routeStatus: 'INDIVIDUAL_REVIEW_REQUIRED' }, { routeId: 'missing', routeStatus: 'INSUFFICIENT_COUNTRY_DATA' }]).routeId, 'missing');
 });

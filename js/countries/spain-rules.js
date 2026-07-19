@@ -1,0 +1,15 @@
+export const INCOME_TYPE_BY_SCENARIO = Object.freeze({
+  REMOTE_EMPLOYEE: 'EMPLOYEE', REMOTE_CONTRACTOR: 'CONTRACTOR',
+  FOREIGN_COMPANY_OWNER: 'COMPANY_OWNER', PASSIVE_INCOME: 'PASSIVE', STUDY: 'OTHER',
+  SELF_EMPLOYED_SPAIN: 'BUSINESS_PLAN', INNOVATIVE_PROJECT: 'BUSINESS_PLAN',
+  SPANISH_JOB_OFFER: 'SALARY_REVIEW',
+});
+
+export const ROUTE_RULES = Object.freeze({
+  ES_DNV: { incomeTypes: ['EMPLOYEE', 'CONTRACTOR', 'COMPANY_OWNER'], scenarios: ['REMOTE_EMPLOYEE', 'REMOTE_CONTRACTOR', 'FOREIGN_COMPANY_OWNER'], socialSecurityReview: true },
+  ES_NLV: { incomeTypes: ['PASSIVE'], scenarios: ['PASSIVE_INCOME'] },
+  ES_SELF_EMPLOYED: { incomeTypes: ['BUSINESS_PLAN'], scenarios: ['SELF_EMPLOYED_SPAIN'], individualReview: true },
+  ES_ENTREPRENEUR: { incomeTypes: ['BUSINESS_PLAN'], scenarios: ['INNOVATIVE_PROJECT'], individualReview: true },
+  ES_HIGHLY_QUALIFIED: { incomeTypes: ['SALARY_REVIEW'], scenarios: ['SPANISH_JOB_OFFER'], missingSalaryThreshold: true },
+  ES_STUDENT: { incomeTypes: ['OTHER'], scenarios: ['STUDY'] },
+});
