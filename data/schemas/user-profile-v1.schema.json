@@ -280,7 +280,10 @@
           "enum": ["LARGE", "MEDIUM", "SMALL", "ANY"]
         },
         "climate": {
-          "enum": ["COOL", "TEMPERATE", "WARM", "HOT", "ANY"]
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["COOL", "TEMPERATE", "WARM", "HOT", "ANY"] }
         }
       }
     },

@@ -1,10 +1,12 @@
+import { parseCountryCode } from './countries.js';
+
 const money = (amount, currency) => amount === '' || amount == null ? null : ({ amount: Number(amount), currency });
 
 const incomeSource = (prefix, owner, answers) => ({
   owner,
   type: answers[`${prefix}Type`],
-  source_country: answers[`${prefix}SourceCountry`]?.toUpperCase(),
-  bank_country: answers[`${prefix}BankCountry`]?.toUpperCase(),
+  source_country: parseCountryCode(answers[`${prefix}SourceCountry`]),
+  bank_country: parseCountryCode(answers[`${prefix}BankCountry`]),
   monthly_provable: money(answers[`${prefix}Amount`], answers[`${prefix}Currency`]),
   evidence_level: answers[`${prefix}Evidence`],
   history_months: null,
@@ -31,7 +33,7 @@ export function buildUserProfile(answers) {
     schema_version: 'user-profile-v1',
     citizenships: ['RU'],
     residence: {
-      current_country: answers.currentCountry?.toUpperCase(),
+      current_country: parseCountryCode(answers.currentCountry),
       current_status: answers.currentStatus,
     },
     application_preferences: { methods: answers.applicationMethods?.length ? answers.applicationMethods : answers.applicationMethod ? [answers.applicationMethod] : [] },
@@ -65,7 +67,7 @@ export function buildUserProfile(answers) {
     preferences: {
       monthly_budget: answers.budgetUnknown ? null : money(answers.monthlyBudget, answers.budgetCurrency),
       city_size: answers.citySize,
-      climate: answers.climate,
+      climate: answers.climates?.length ? answers.climates : answers.climate ? [answers.climate] : [],
     },
     pets: {
       types: petTypes,
@@ -106,7 +108,7 @@ export function validateUserProfile(profile) {
   if (!profile?.goal?.keep_russian_citizenship) add('keepRuCitizenship', 'Укажите важность сохранения гражданства РФ.');
   if (profile?.preferences?.monthly_budget !== null && (!positiveMoney(profile?.preferences?.monthly_budget) || profile.preferences.monthly_budget.amount <= 0)) add('monthlyBudget', 'Укажите положительный семейный бюджет или выберите «Пока не знаю».');
   if (!profile?.preferences?.city_size) add('citySize', 'Выберите размер города.');
-  if (!profile?.preferences?.climate) add('climate', 'Выберите климат.');
+  if (!profile?.preferences?.climate?.length) add('climates', 'Выберите хотя бы один климат.');
   if (!profile?.pets?.types?.length) add('petTypes', 'Укажите домашних животных.');
   if (!profile?.special_circumstances?.length) add('specialCircumstances', 'Ответьте на вопрос об особых обстоятельствах.');
   return { valid: errors.length === 0, errors };

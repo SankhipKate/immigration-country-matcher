@@ -6,8 +6,8 @@
   <meta name="description" content="Универсальная анкета Immigration Matcher для граждан РФ">
   <meta name="theme-color" content="#071e3d">
   <title>Анкета — Immigration Matcher</title>
-  <link rel="stylesheet" href="../pilot/styles.css">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="../pilot/styles.css?v=20260719-2">
+  <link rel="stylesheet" href="./styles.css?v=20260719-2">
 </head>
 <body>
   <header class="site-header"><div class="nav-shell"><a class="brand" href="../" aria-label="Immigration Matcher — главная"><span class="brand-mark" aria-hidden="true"><span></span></span><span>Immigration <em>Matcher</em></span></a><a class="catalog-link" href="../">Каталог стран</a><div class="secure-note"><span aria-hidden="true">◇</span> Данные остаются в браузере</div></div></header>
@@ -28,7 +28,7 @@
         <section class="wizard-step is-active" data-step="1">
           <div class="step-heading"><span class="step-number">1</span><div><h2>Где вы сейчас</h2><p>Фактический статус помогает понять, откуда можно подать заявление.</p></div></div>
           <div class="field-grid two-col">
-            <label class="field"><span>Текущая страна</span><input id="currentCountry" maxlength="2" placeholder="Например, PH или RU" autocomplete="country"></label>
+            <label class="field"><span>Текущая страна</span><input id="currentCountry" list="countryOptions" placeholder="Начните вводить название" autocomplete="off"></label>
             <label class="field"><span>Ваш статус в этой стране</span><select id="currentStatus"><option value="">Не выбрано</option><option value="CITIZENSHIP">Гражданство</option><option value="PERMANENT_RESIDENCE">ПМЖ</option><option value="TEMPORARY_RESIDENCE">ВНЖ</option><option value="WORK_OR_FAMILY_VISA">Рабочая или семейная виза</option><option value="STUDENT_STATUS">Студенческий статус</option><option value="TOURIST_OR_VISA_FREE">Туристическая виза или безвизовый въезд</option><option value="OTHER_LEGAL_STATUS">Другой законный статус</option><option value="NO_LEGAL_STATUS">Нет законного статуса</option></select></label>
           </div>
           <fieldset class="choice-group"><legend>Какие способы подачи готовы рассматривать? Можно выбрать несколько.</legend><div class="choice-grid two-choice"><label class="choice-card"><input type="checkbox" name="applicationMethod" value="CURRENT_COUNTRY"><span>Из страны, где я сейчас<small>Если мой текущий статус позволяет</small></span></label><label class="choice-card"><input type="checkbox" name="applicationMethod" value="RUSSIA"><span>Из России<small>Готовы вернуться для подачи</small></span></label><label class="choice-card"><input type="checkbox" name="applicationMethod" value="IN_COUNTRY_AFTER_ENTRY"><span>После въезда в страну<small>Если правила это допускают</small></span></label><label class="choice-card"><input type="checkbox" name="applicationMethod" value="ANY"><span>Рассмотрю любой способ<small>Этот выбор отменит остальные</small></span></label></div></fieldset>
@@ -47,8 +47,8 @@
           <div class="step-heading"><span class="step-number">3</span><div><h2>Доход и документы</h2><p>Укажите сумму, которую реально можно подтвердить договором, выписками или налоговыми документами.</p></div></div>
           <div class="income-block"><h3>Основной доход заявителя</h3><div class="field-grid two-col">
             <label class="field"><span>Тип дохода</span><select id="primaryType"><option value="">Не выбрано</option><option value="REMOTE_EMPLOYMENT">Удалённая работа по найму</option><option value="CONTRACTOR">Контракты</option><option value="FREELANCE_OR_SELF_EMPLOYED">Фриланс или самозанятость</option><option value="SOLE_PROPRIETOR">ИП</option><option value="COMPANY_OWNER">Владелец компании</option><option value="PASSIVE_INCOME">Пассивный доход</option><option value="OTHER_REGULAR_REMOTE_INCOME">Другой регулярный доход</option></select></label>
-            <label class="field"><span>Страна источника дохода</span><input id="primarySourceCountry" maxlength="2" placeholder="Например, US"></label>
-            <label class="field"><span>Страна банковского счёта</span><input id="primaryBankCountry" maxlength="2" placeholder="Например, GE"></label>
+            <label class="field"><span>Страна источника дохода</span><input id="primarySourceCountry" list="countryOptions" placeholder="Начните вводить название"></label>
+            <label class="field"><span>Страна банковского счёта</span><input id="primaryBankCountry" list="countryOptions" placeholder="Начните вводить название"></label>
             <label class="field"><span>Подтверждаемая сумма в месяц</span><div class="money-combo"><input id="primaryAmount" type="number" min="0" placeholder="3000"><select id="primaryCurrency"><option>USD</option><option>EUR</option><option>RUB</option></select></div></label>
             <label class="field"><span>Насколько полно подтверждается доход</span><select id="primaryEvidence"><option value="">Не выбрано</option><option value="FULL">Полностью</option><option value="PARTIAL">Частично</option><option value="NONE">Пока нет документов</option></select></label>
           </div></div>
@@ -66,7 +66,8 @@
 
         <section class="wizard-step" data-step="5" hidden>
           <div class="step-heading"><span class="step-number">5</span><div><h2>Семейный бюджет и условия жизни</h2><p>Бюджет включает аренду, продукты, транспорт, медицину и обычные расходы. Школа считается отдельно.</p></div></div>
-          <div class="field-grid two-col"><label class="field"><span>Максимальный семейный бюджет в месяц</span><div class="money-combo"><input id="monthlyBudget" type="number" min="0" placeholder="2500"><select id="budgetCurrency"><option>USD</option><option>EUR</option><option>RUB</option></select></div></label><label class="toggle-row"><span><b>Пока не знаю бюджет</b><small>Юридический расчёт всё равно будет выполнен</small></span><input id="budgetUnknown" type="checkbox"><i></i></label><label class="field"><span>Размер города</span><select id="citySize"><option value="">Не выбрано</option><option value="ANY">Неважно</option><option value="LARGE">Крупный</option><option value="MEDIUM">Средний</option><option value="SMALL">Небольшой</option></select></label><label class="field"><span>Предпочитаемый климат</span><select id="climate"><option value="">Не выбрано</option><option value="ANY">Неважно</option><option value="COOL">Прохладный</option><option value="TEMPERATE">Умеренный</option><option value="WARM">Тёплый</option><option value="HOT">Жаркий</option></select></label></div>
+          <div class="field-grid two-col"><label class="field"><span>Максимальный семейный бюджет в месяц</span><div class="money-combo"><input id="monthlyBudget" type="number" min="0" placeholder="2500"><select id="budgetCurrency"><option>USD</option><option>EUR</option><option>RUB</option></select></div></label><label class="toggle-row"><span><b>Пока не знаю бюджет</b><small>Юридический расчёт всё равно будет выполнен</small></span><input id="budgetUnknown" type="checkbox"><i></i></label><label class="field"><span>Размер города</span><select id="citySize"><option value="">Не выбрано</option><option value="ANY">Неважно</option><option value="LARGE">Крупный</option><option value="MEDIUM">Средний</option><option value="SMALL">Небольшой</option></select></label></div>
+          <fieldset class="choice-group"><legend>Предпочитаемый климат — можно выбрать несколько</legend><div class="segmented climate-options"><label><input type="checkbox" name="climate" value="COOL"><span>Прохладный</span></label><label><input type="checkbox" name="climate" value="TEMPERATE"><span>Умеренный</span></label><label><input type="checkbox" name="climate" value="WARM"><span>Тёплый</span></label><label><input type="checkbox" name="climate" value="HOT"><span>Жаркий</span></label><label><input type="checkbox" name="climate" value="ANY"><span>Неважно</span></label></div></fieldset>
           <fieldset class="choice-group"><legend>Домашние животные</legend><div class="segmented four"><label><input type="radio" name="petType" value="NONE"><span>Нет</span></label><label><input type="radio" name="petType" value="DOG"><span>Собака</span></label><label><input type="radio" name="petType" value="CAT"><span>Кошка</span></label><label><input type="radio" name="petType" value="OTHER"><span>Другие</span></label></div></fieldset>
           <div id="dogBlock" class="conditional-card" hidden><label class="field"><span>Порода собаки — можно не указывать</span><input id="dogBreed" maxlength="120" placeholder="Например, корги"></label></div><div id="otherPetBlock" class="conditional-card" hidden><label class="field"><span>Какие животные?</span><input id="otherPetNotes" maxlength="500"></label></div>
         </section>
@@ -87,6 +88,7 @@
 
     <section id="resultView" class="result-layout" hidden><div id="result" class="surface result-main"></div><aside class="sidebar"><section class="surface profile-card"><div class="card-title"><h2>Ваш профиль</h2></div><div id="resultProfileSummary" class="summary-list"></div></section><section class="benefit-card next-card"><h2>Что дальше</h2><button id="editProfile" class="secondary-button full" type="button">Изменить ответы</button><a class="outline-link" href="../pilot/">Открыть старый пилот</a></section></aside></section>
   </main>
+  <datalist id="countryOptions"></datalist>
   <div id="toast" class="toast" role="status" hidden></div>
   <script type="module" src="./app.js"></script>
 </body>
