@@ -1,0 +1,125 @@
+{
+  "schema_version": "research-package-v2.2",
+  "generated_at": "2026-07-19",
+  "country": {
+    "country_id": "UY",
+    "iso2": "UY",
+    "name_ru": "Уругвай",
+    "name_en": "Uruguay",
+    "currency_code": "UYU",
+    "country_research_status": "SECONDARY_REVIEW",
+    "confidence": "MEDIUM",
+    "last_verified_at": "2026-07-19",
+    "next_review_at": "2026-10-19",
+    "primary_source_id": "S_UY_RESIDENCE",
+    "notes": "Юридические основания подтверждены официальными источниками. Фиксированного универсального порога средств не опубликовано; городские расходы предварительные."
+  },
+  "routes": [
+    {
+      "country_id": "UY",
+      "route_id": "UY_PERMANENT",
+      "official_name": "Residencia Legal Permanente",
+      "name_ru": "Постоянная резиденция",
+      "route_type": "PERMANENT_RESIDENCE",
+      "description": "Прямая постоянная резиденция для иностранца, намеренного постоянно жить в Уругвае.",
+      "active_status": "ACTIVE",
+      "allowed_nationalities": ["THIRD_COUNTRY"],
+      "russian_citizens_allowed": "YES",
+      "application_methods": ["IN_COUNTRY"],
+      "application_from_russia": "NO",
+      "in_country_application_allowed": "YES",
+      "requires_legal_residence_in_application_country": "NO",
+      "initial_residence_available": "YES",
+      "renewal_available": "NOT_APPLICABLE",
+      "main_refusal_reasons": "Неполные или неапостилированные документы; отсутствие подтверждения средств; несоответствие требованиям въезда.",
+      "route_research_status": "VERIFIED",
+      "confidence": "HIGH",
+      "primary_source_id": "S_UY_PERMANENT"
+    },
+    {
+      "country_id": "UY",
+      "route_id": "UY_TEMPORARY",
+      "official_name": "Residencia Legal Temporaria",
+      "name_ru": "Временная резиденция",
+      "route_type": "TEMPORARY_RESIDENCE",
+      "description": "Резиденция на срок от шести месяцев до двух лет по работе, учёбе или иному предусмотренному основанию.",
+      "active_status": "ACTIVE",
+      "allowed_nationalities": ["THIRD_COUNTRY"],
+      "russian_citizens_allowed": "YES",
+      "application_methods": ["IN_COUNTRY"],
+      "application_from_russia": "NO",
+      "in_country_application_allowed": "YES",
+      "requires_legal_residence_in_application_country": "NO",
+      "initial_residence_available": "YES",
+      "first_permit_months": 24,
+      "renewal_available": "YES",
+      "main_refusal_reasons": "Отсутствие подтверждённой деятельности или цели проживания; неполные документы.",
+      "route_research_status": "VERIFIED",
+      "confidence": "HIGH",
+      "primary_source_id": "S_UY_TEMPORARY"
+    },
+    {
+      "country_id": "UY",
+      "route_id": "UY_DIGITAL_NOMAD",
+      "official_name": "Hoja de Identidad Provisoria — Nómades Digitales",
+      "name_ru": "Разрешение цифрового кочевника",
+      "route_type": "DIGITAL_NOMAD",
+      "description": "Для удалённой работы на иностранную компанию или на себя после законного въезда в Уругвай.",
+      "active_status": "ACTIVE",
+      "allowed_nationalities": ["THIRD_COUNTRY"],
+      "russian_citizens_allowed": "YES",
+      "application_methods": ["IN_COUNTRY"],
+      "application_from_russia": "NO",
+      "in_country_application_allowed": "YES",
+      "requires_legal_residence_in_application_country": "NO",
+      "initial_residence_available": "YES",
+      "first_permit_months": 6,
+      "renewal_available": "YES",
+      "renewal_period_months": 6,
+      "main_refusal_reasons": "Незаконный въезд; неподходящий характер работы; отсутствие декларации о средствах.",
+      "route_research_status": "VERIFIED",
+      "confidence": "HIGH",
+      "primary_source_id": "S_UY_NOMAD"
+    }
+  ],
+  "route_income": [
+    {"route_id":"UY_DIGITAL_NOMAD","accepted_income_type":"EMPLOYEE","minimum_income_main_applicant":0,"partner_increment_value":0,"child_increment_value":0},
+    {"route_id":"UY_DIGITAL_NOMAD","accepted_income_type":"CONTRACTOR","minimum_income_main_applicant":0,"partner_increment_value":0,"child_increment_value":0},
+    {"route_id":"UY_DIGITAL_NOMAD","accepted_income_type":"COMPANY_OWNER","minimum_income_main_applicant":0,"partner_increment_value":0,"child_increment_value":0}
+  ],
+  "route_family": [
+    {"route_id":"UY_PERMANENT","partner_allowed":"YES","children_allowed":"YES","accepted_relationship_types":["MARRIED","REGISTERED_PARTNERSHIP"],"unregistered_partner_allowed":"INDIVIDUAL_REVIEW","same_sex_partner_allowed":"YES","same_sex_unregistered_partner_allowed":"INDIVIDUAL_REVIEW","dependent_child_age_limit":18,"source_id":"S_UY_MIGRATION_LAW"},
+    {"route_id":"UY_TEMPORARY","partner_allowed":"YES","children_allowed":"YES","accepted_relationship_types":["MARRIED","REGISTERED_PARTNERSHIP"],"unregistered_partner_allowed":"INDIVIDUAL_REVIEW","same_sex_partner_allowed":"YES","same_sex_unregistered_partner_allowed":"INDIVIDUAL_REVIEW","dependent_child_age_limit":18,"source_id":"S_UY_MIGRATION_LAW"},
+    {"route_id":"UY_DIGITAL_NOMAD","partner_allowed":"NO","children_allowed":"NO","accepted_relationship_types":[],"unregistered_partner_allowed":"NO","same_sex_partner_allowed":"NO","same_sex_unregistered_partner_allowed":"NO","dependent_child_age_limit":null,"source_id":"S_UY_NOMAD"}
+  ],
+  "route_status": [
+    {"route_id":"UY_PERMANENT","path_to_pr":"DIRECT","years_to_pr":0,"residence_counted_for_pr":"YES","path_to_citizenship":"YES","citizenship_by_residence_available":"YES","nominal_years_to_citizenship":null,"language_exam_required":"UNKNOWN","required_language":"es","required_language_level":"FUNCTIONAL","multiple_citizenship_allowed":"UNKNOWN","allowed_absence_for_citizenship_days":null,"source_id":"S_UY_CITIZENSHIP","notes":"Срок обычного проживания — 3 года с семьёй, сформированной в Уругвае, либо 5 лет без неё; нужно понимать и говорить по-испански. Выезд более чем на 6 месяцев подряд обнуляет срок."},
+    {"route_id":"UY_TEMPORARY","path_to_pr":"CONDITIONAL","years_to_pr":null,"residence_counted_for_pr":"UNKNOWN","path_to_citizenship":"YES","citizenship_by_residence_available":"YES","nominal_years_to_citizenship":null,"language_exam_required":"UNKNOWN","required_language":"es","required_language_level":"FUNCTIONAL","multiple_citizenship_allowed":"UNKNOWN","allowed_absence_for_citizenship_days":null,"source_id":"S_UY_CITIZENSHIP","notes":"Срок обычного проживания — 3 года с семьёй, сформированной в Уругвае, либо 5 лет без неё; нужно понимать и говорить по-испански. Выезд более чем на 6 месяцев подряд обнуляет срок."},
+    {"route_id":"UY_DIGITAL_NOMAD","path_to_pr":"CONDITIONAL","years_to_pr":null,"residence_counted_for_pr":"UNKNOWN","path_to_citizenship":"UNKNOWN","citizenship_by_residence_available":"UNKNOWN","nominal_years_to_citizenship":null,"language_exam_required":"UNKNOWN","multiple_citizenship_allowed":"UNKNOWN","allowed_absence_for_citizenship_days":null,"source_id":"S_UY_NOMAD"}
+  ],
+  "route_work": [
+    {"route_id":"UY_PERMANENT","remote_work_allowed":"YES","local_work_rights":"Резиденция позволяет жить, учиться и работать.","business_activity_allowed":"YES","dependent_work_rights":"Каждый член семьи оформляет собственный статус.","source_id":"S_UY_RESIDENCE"},
+    {"route_id":"UY_TEMPORARY","remote_work_allowed":"CONDITIONAL","local_work_rights":"В рамках подтверждённой деятельности.","business_activity_allowed":"CONDITIONAL","dependent_work_rights":"Каждый член семьи оформляет собственный статус.","source_id":"S_UY_TEMPORARY"},
+    {"route_id":"UY_DIGITAL_NOMAD","remote_work_allowed":"YES","local_work_rights":"Только удалённая работа на иностранную компанию или на себя.","business_activity_allowed":"YES","dependent_work_rights":"Семья не включается автоматически.","source_id":"S_UY_NOMAD"}
+  ],
+  "cities": [
+    {
+      "city_id":"UY_MONTEVIDEO","country_id":"UY","name_ru":"Монтевидео","name_en":"Montevideo","population_category":"LARGE",
+      "estimated_monthly_cost_single_usd":2200,"estimated_monthly_cost_couple_usd":3200,"estimated_monthly_cost_family_1_child_usd":4500,
+      "additional_adult_cost_usd":1000,"additional_child_cost_usd":1300,"school_cost_not_included":"YES","climate_category":"MILD",
+      "international_school_available":"YES","pet_friendly_housing":"UNKNOWN","airport_name":"Aeropuerto Internacional de Carrasco",
+      "city_research_status":"SECONDARY_REVIEW","confidence":"LOW","primary_source_id":"S_UY_CITY_COST",
+      "notes":"Предварительная модель семейного бюджета; требуется отдельная проверка жилья и школы."
+    }
+  ],
+  "pet_rules": [],
+  "sources": [
+    {"source_id":"S_UY_RESIDENCE","title":"Tipos de residencias en Uruguay","authority_name":"Ministerio del Interior","url":"https://www.gub.uy/ministerio-interior/comunicacion/publicaciones/types-of-residencies-in-uruguay","official":"YES","primary":"YES","accessed_at":"2026-07-19"},
+    {"source_id":"S_UY_PERMANENT","title":"Residencia Legal - Permanente","authority_name":"Dirección Nacional de Migración","url":"https://www.gub.uy/tramites/residencia-legal-permanente","official":"YES","primary":"YES","accessed_at":"2026-07-19"},
+    {"source_id":"S_UY_TEMPORARY","title":"Residencia Legal - Temporaria","authority_name":"Dirección Nacional de Migración","url":"https://www.gub.uy/tramites/residencia-legal-temporaria","official":"YES","primary":"YES","accessed_at":"2026-07-19"},
+    {"source_id":"S_UY_NOMAD","title":"Permiso especial de residencia legal para nómades digitales","authority_name":"AGESIC","url":"https://www.gub.uy/agencia-gobierno-electronico-sociedad-informacion-conocimiento/comunicacion/noticias/permiso-especial-residencia-legal","official":"YES","primary":"YES","accessed_at":"2026-07-19"},
+    {"source_id":"S_UY_CITIZENSHIP","title":"Carta de ciudadanía","authority_name":"Corte Electoral","url":"https://www.gub.uy/tramites/carta-ciudadania","official":"YES","primary":"YES","accessed_at":"2026-07-19"},
+    {"source_id":"S_UY_MIGRATION_LAW","title":"Ley Nº 18.250 — Migración","authority_name":"Estado uruguayo","url":"https://www.aduanas.gub.uy/innovaportal/v/7789/14/innova.front/ley-n%C2%BA-18250.html","official":"YES","primary":"YES","accessed_at":"2026-07-19"},
+    {"source_id":"S_UY_CITY_COST","title":"Предварительная оценка стоимости жизни в Монтевидео","authority_name":"Project research","url":"","official":"NO","primary":"NO","accessed_at":"2026-07-19"}
+  ]
+}

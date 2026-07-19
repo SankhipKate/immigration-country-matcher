@@ -15,4 +15,7 @@ export const ROUTE_RULES = Object.freeze({
   ES_ENTREPRENEUR: { incomeTypes: ['BUSINESS_PLAN'], scenarios: ['INNOVATIVE_PROJECT'], individualReview: true },
   ES_HIGHLY_QUALIFIED: { incomeTypes: ['SALARY_REVIEW'], scenarios: ['SPANISH_JOB_OFFER'], missingSalaryThreshold: true },
   ES_STUDENT: { incomeTypes: ['OTHER'], scenarios: ['STUDY'] },
+  UY_PERMANENT: { incomeTypes: ['EMPLOYEE', 'CONTRACTOR', 'COMPANY_OWNER', 'PASSIVE', 'BUSINESS_PLAN', 'OTHER'], scenarios: [], individualReview: true },
+  UY_TEMPORARY: { incomeTypes: ['EMPLOYEE', 'CONTRACTOR', 'COMPANY_OWNER', 'PASSIVE', 'BUSINESS_PLAN', 'OTHER'], scenarios: [], individualReview: true },
+  UY_DIGITAL_NOMAD: { incomeTypes: ['EMPLOYEE', 'CONTRACTOR', 'COMPANY_OWNER'], scenarios: ['REMOTE_EMPLOYEE', 'REMOTE_CONTRACTOR', 'FOREIGN_COMPANY_OWNER'], meansDeclaration: true },
 });
