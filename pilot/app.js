@@ -7,6 +7,7 @@ import { loadCalculationContext } from './fx-context.js';
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const form = $('#profile-form');
+const citizenshipGate = $('#citizenshipGate');
 const questionnaireView = $('#questionnaireView');
 const resultView = $('#resultView');
 const resultRoot = $('#result');
@@ -367,11 +368,25 @@ function switchToResult(calculation) {
 }
 
 function switchToQuestionnaire() {
+  citizenshipGate.hidden = true;
   resultView.hidden = true;
   questionnaireView.hidden = false;
   $('#heroTitle').textContent = 'Подберём страну для иммиграции';
   $('#heroSubtitle').textContent = 'Сравним способы получить ВНЖ, требования к доходу, условия для семьи и перспективы ПМЖ или гражданства.';
   showStep(1);
+}
+
+function acceptRuCitizenship() {
+  $('#citizenshipNotice').hidden = true;
+  switchToQuestionnaire();
+}
+
+function rejectRuCitizenship() {
+  questionnaireView.hidden = true;
+  resultView.hidden = true;
+  const notice = $('#citizenshipNotice');
+  notice.hidden = false;
+  notice.focus();
 }
 
 function draftData() {
@@ -488,5 +503,7 @@ $('#saveDraft').addEventListener('click', () => { if (hasMeaningfulFormData()) {
 $('#clearDraft').addEventListener('click', () => { clearQuestionnaire(); showToast('Анкета очищена'); });
 $('#saveResult').addEventListener('click', () => { if (lastCalculation) { localStorage.setItem(RESULT_KEY, JSON.stringify({ savedAt: new Date().toISOString(), profile: readProfile(), calculation: lastCalculation })); showToast('Результат сохранён в этом браузере'); } });
 $('#editProfile').addEventListener('click', switchToQuestionnaire);
+$('#confirmRuCitizenship').addEventListener('click', acceptRuCitizenship);
+$('#denyRuCitizenship').addEventListener('click', rejectRuCitizenship);
 
 init();

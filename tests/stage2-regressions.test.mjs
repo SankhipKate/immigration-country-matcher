@@ -54,3 +54,14 @@ test('main pilot contains no social-security route-specific question', async () 
   assert.equal(source.includes('social' + 'SecurityPlan'), false);
   assert.equal(source.includes('Как планируете подтвердить социальное страхование'), false);
 });
+
+test('pilot gates the questionnaire behind Russian citizenship confirmation', async () => {
+  const html = await readFile(new URL('../pilot/index.html', import.meta.url), 'utf8');
+  const app = await readFile(new URL('../pilot/app.js', import.meta.url), 'utf8');
+  assert.ok(html.indexOf('У вас есть гражданство РФ?') < html.indexOf('id="profile-form"'));
+  assert.match(html, /id="questionnaireView"[^>]*hidden/);
+  assert.ok(html.includes('Для других гражданств эти сведения неприменимы.'));
+  assert.ok(app.includes("$('#confirmRuCitizenship').addEventListener('click', acceptRuCitizenship)"));
+  assert.ok(app.includes("$('#denyRuCitizenship').addEventListener('click', rejectRuCitizenship)"));
+  assert.equal(/дополнительн(?:ое|ые) гражданств/i.test(html), false);
+});
