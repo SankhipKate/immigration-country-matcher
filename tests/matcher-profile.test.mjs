@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { buildUserProfile, validateAgainstSchema, validateUserProfile } from '../matcher/profile.js';
+import { buildUserProfile, collectEligibleFollowUps, describeIncomeRequirement, describeResultIntro, validateAgainstSchema, validateUserProfile } from '../matcher/profile.js';
 import { calculateSpain } from '../js/spain-calculator.js';
 
 const profileSchema = JSON.parse(await readFile(new URL('../data/schemas/user-profile-v1.schema.json', import.meta.url), 'utf8'));
@@ -9,8 +9,8 @@ const spainData = JSON.parse(await readFile(new URL('../data/spain-research-v2.2
 const context = { calculation_date: '2026-07-19T12:00:00Z', engine_version: '2.1.0', fx: { base_currency: 'USD', rates: { EUR: 0.87, RUB: 80 }, source: 'test', as_of: '2026-07-19T00:00:00Z', max_age_hours: 96 } };
 
 const answers = (overrides = {}) => ({
-  currentCountry: 'PH', currentStatus: 'TOURIST_OR_VISA_FREE', applicationMethod: 'ANY',
-  partnerIncluded: false, relationshipType: '', lgbtEnabled: false, childAges: [], schoolNeeded: false,
+  currentCountry: 'PH', currentStatus: 'TOURIST_OR_VISA_FREE', applicationMethods: ['ANY'],
+  hasPartner: false, partnerIncluded: false, relationshipType: '', lgbtEnabled: false, childAges: [], schoolNeeded: false,
   primaryType: 'REMOTE_EMPLOYMENT', primarySourceCountry: 'US', primaryBankCountry: 'GE', primaryAmount: '4000', primaryCurrency: 'USD', primaryEvidence: 'FULL',
   hasAdditionalIncome: false, partnerHasIncome: false,
   longTermGoal: 'TEMPORARY_RESIDENCE_SUFFICIENT', physicalPresence: 'MOST_OF_YEAR', languageExamReadiness: '', keepRuCitizenship: 'REQUIRED',
@@ -28,7 +28,7 @@ test('new matcher creates a valid user-profile-v1 for one Russian citizen', () =
 });
 
 test('partner and child remain separate family members', () => {
-  const profile = buildUserProfile(answers({ partnerIncluded: true, relationshipType: 'MARRIAGE', childAges: ['7'], schoolNeeded: true }));
+  const profile = buildUserProfile(answers({ hasPartner: true, partnerIncluded: true, relationshipType: 'MARRIAGE', childAges: ['7'], schoolNeeded: true }));
   assert.equal(profile.family.adults_count, 2);
   assert.deepEqual(profile.family.children, [{ age_years: 7 }]);
   assert.equal(profile.family.school_needed, true);
@@ -36,17 +36,23 @@ test('partner and child remain separate family members', () => {
 
 test('registered and unregistered partnerships are preserved', () => {
   for (const relationshipType of ['REGISTERED_PARTNERSHIP', 'UNREGISTERED_PARTNER']) {
-    assert.equal(buildUserProfile(answers({ partnerIncluded: true, relationshipType })).family.relationship_type, relationshipType);
+    assert.equal(buildUserProfile(answers({ hasPartner: true, partnerIncluded: true, relationshipType })).family.relationship_type, relationshipType);
   }
 });
 
 test('same-sex personalization requires an included partner and explicit choice', () => {
-  assert.equal(buildUserProfile(answers({ partnerIncluded: true, relationshipType: 'MARRIAGE', lgbtEnabled: true })).lgbt.consent_for_personalization, true);
+  assert.equal(buildUserProfile(answers({ hasPartner: true, partnerIncluded: true, relationshipType: 'MARRIAGE', lgbtEnabled: true })).lgbt.consent_for_personalization, true);
   assert.equal(buildUserProfile(answers({ partnerIncluded: false, lgbtEnabled: true })).lgbt.enabled, false);
 });
 
 test('tourist status is not converted to residence', () => {
   assert.equal(buildUserProfile(answers()).residence.current_status, 'TOURIST_OR_VISA_FREE');
+});
+
+test('user can select current-country and in-country application methods together', () => {
+  const profile = buildUserProfile(answers({ applicationMethods: ['CURRENT_COUNTRY', 'IN_COUNTRY_AFTER_ENTRY'] }));
+  assert.deepEqual(profile.application_preferences.methods, ['CURRENT_COUNTRY', 'IN_COUNTRY_AFTER_ENTRY']);
+  assert.equal(validateAgainstSchema(profile, profileSchema).length, 0);
 });
 
 test('income and budget retain their own currencies', () => {
@@ -81,6 +87,23 @@ test('DNV follow-up appears after the first matcher calculation and disappears a
   const answeredProfile = buildUserProfile(answers({ routeSpecificAnswers: { ES_DNV: { social_security_plan: 'REGISTER_IN_SPAIN' } } }));
   const answered = calculateSpain(answeredProfile, spainData, context);
   assert.equal(answered.routes.flatMap((route) => route.followUpQuestions).some((question) => question.code === 'ES_DNV_SOCIAL_SECURITY_PLAN'), false);
+});
+
+test('follow-up is not shown for an unsuitable route', () => {
+  const followUps = collectEligibleFollowUps({ routes: [{ routeStatus: 'UNSUITABLE', routeName: 'DNV', followUpQuestions: [{ code: 'ES_DNV_SOCIAL_SECURITY_PLAN' }] }] });
+  assert.deepEqual(followUps, []);
+});
+
+test('income-type mismatch explicitly says that the amount is not the problem', () => {
+  const message = describeIncomeRequirement({ incomeTypeFit: 'DOES_NOT_MEET', thresholdEur: null }, () => '');
+  assert.ok(message.includes('Сумма дохода не является причиной'));
+  assert.equal(message.includes('порог'), false);
+});
+
+test('all unsuitable routes are not presented as the best option', () => {
+  const intro = describeResultIntro([{ routeStatus: 'UNSUITABLE' }, { routeStatus: 'UNSUITABLE' }]);
+  assert.equal(intro.heading, 'Сейчас подходящих вариантов не найдено');
+  assert.equal(intro.routeLabel, 'Наиболее близкий вариант при изменении условий');
 });
 
 test('missing child age is reported as a profile validation error', () => {
