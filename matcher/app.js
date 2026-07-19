@@ -1,6 +1,6 @@
 import { calculateSpain, STATUS_LABELS_RU } from '../js/spain-calculator.js';
 import { loadCalculationContext } from '../pilot/fx-context.js';
-import { buildUserProfile, validateAgainstSchema, validateUserProfile } from './profile.js';
+import { buildUserProfile, collectEligibleFollowUps, describeIncomeRequirement, describeResultIntro, validateAgainstSchema, validateUserProfile } from './profile.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -17,6 +17,7 @@ let profileSchema;
 const value = (id) => $(`#${id}`)?.value ?? '';
 const checked = (id) => Boolean($(`#${id}`)?.checked);
 const radio = (name) => $(`input[name="${name}"]:checked`)?.value || '';
+const checkboxValues = (name) => $$(`input[name="${name}"]:checked`).map((input) => input.value);
 const html = (text) => String(text ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
 const currency = (amount, code = 'USD') => new Intl.NumberFormat('ru-RU', { style: 'currency', currency: code, maximumFractionDigits: 0 }).format(Number(amount || 0));
 
@@ -34,8 +35,8 @@ $('#partnerIncomeBlock').innerHTML = INCOME_FIELDS('partner', 'Доход пар
 function collectAnswers() {
   const childAges = $$('#childAges input').map((input) => input.value);
   return {
-    currentCountry: value('currentCountry'), currentStatus: value('currentStatus'), applicationMethod: radio('applicationMethod'),
-    partnerIncluded: radio('partnerIncluded') === 'YES', relationshipType: value('relationshipType'), lgbtEnabled: checked('lgbtEnabled'),
+    currentCountry: value('currentCountry'), currentStatus: value('currentStatus'), applicationMethods: checkboxValues('applicationMethod'),
+    hasPartner: radio('hasPartner') === 'YES', partnerIncluded: radio('hasPartner') === 'YES' && radio('partnerIncluded') === 'YES', relationshipType: value('relationshipType'), lgbtEnabled: checked('lgbtEnabled'),
     childAges, schoolNeeded: checked('schoolNeeded'),
     primaryType: value('primaryType'), primarySourceCountry: value('primarySourceCountry'), primaryBankCountry: value('primaryBankCountry'), primaryAmount: value('primaryAmount'), primaryCurrency: value('primaryCurrency'), primaryEvidence: value('primaryEvidence'),
     hasAdditionalIncome: checked('hasAdditionalIncome'), additionalType: value('additionalType'), additionalSourceCountry: value('additionalSourceCountry'), additionalBankCountry: value('additionalBankCountry'), additionalAmount: value('additionalAmount'), additionalCurrency: value('additionalCurrency'), additionalEvidence: value('additionalEvidence'),
@@ -58,7 +59,9 @@ function syncChildren() {
 }
 
 function syncConditional() {
-  const partner = radio('partnerIncluded') === 'YES';
+  const hasPartner = radio('hasPartner') === 'YES';
+  const partner = hasPartner && radio('partnerIncluded') === 'YES';
+  $('#partnerMoveBlock').hidden = !hasPartner;
   $('#partnerBlock').hidden = !partner;
   $('#partnerIncomeQuestion').hidden = !partner;
   $('#partnerIncomeBlock').hidden = !partner || !checked('partnerHasIncome');
@@ -79,9 +82,9 @@ function fieldError(ids, message) {
 
 function validateStep(step) {
   let error;
-  if (step === 1 && (!/^[A-Za-z]{2}$/.test(value('currentCountry')) || !value('currentStatus') || !radio('applicationMethod'))) error = fieldError(['currentCountry'], 'Укажите текущую страну, фактический статус и способ подачи.');
+  if (step === 1 && (!/^[A-Za-z]{2}$/.test(value('currentCountry')) || !value('currentStatus') || checkboxValues('applicationMethod').length === 0)) error = fieldError(['currentCountry'], 'Укажите текущую страну, фактический статус и хотя бы один способ подачи.');
   if (step === 2) {
-    if (!radio('partnerIncluded') || value('childrenCount') === '') error = fieldError(['childrenCount'], 'Укажите, переезжает ли партнёр, и количество детей.');
+    if (!radio('hasPartner') || (radio('hasPartner') === 'YES' && !radio('partnerIncluded')) || value('childrenCount') === '') error = fieldError(['childrenCount'], 'Укажите, есть ли партнёр, переезжает ли он, и количество детей.');
     else if (radio('partnerIncluded') === 'YES' && !value('relationshipType')) error = fieldError(['relationshipType'], 'Укажите, как оформлены отношения.');
     else if ($$('#childAges input').some((input) => input.value === '' || Number(input.value) < 0 || Number(input.value) > 25)) error = fieldError(['childAges'], 'Укажите возраст каждого ребёнка от 0 до 25 лет.');
   }
@@ -111,7 +114,8 @@ function showStep(step, scroll = true) {
   if (scroll) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function familyLabel(p) {
+function familyLabel(p, allowPending = false) {
+  if (allowPending && (!radio('hasPartner') || (radio('hasPartner') === 'YES' && !radio('partnerIncluded')) || value('childrenCount') === '')) return 'Не указан';
   const adults = `${p.family.adults_count} ${p.family.adults_count === 1 ? 'взрослый' : 'взрослых'}`;
   const children = p.family.children.length;
   return children ? `${adults}, ${children} ${children === 1 ? 'ребёнок' : 'детей'}` : adults;
@@ -119,7 +123,7 @@ function familyLabel(p) {
 
 function renderProfileSummary(p) {
   const rows = [
-    ['Гражданство', 'РФ'], ['Семья', familyLabel(p)],
+    ['Гражданство', 'РФ'], ['Семья', familyLabel(p, true)],
     ['Доход', p.income.primary.monthly_provable?.amount ? `${p.income.primary.monthly_provable.amount} ${p.income.primary.monthly_provable.currency}/мес` : 'Не указан'],
     ['Цель', value('longTermGoal') ? $('#longTermGoal').selectedOptions[0].textContent : 'Не указана'],
     ['Семейный бюджет', p.preferences.monthly_budget ? `${p.preferences.monthly_budget.amount} ${p.preferences.monthly_budget.currency}/мес` : checked('budgetUnknown') ? 'Пока не определён' : 'Не указан'],
@@ -140,20 +144,23 @@ function renderReview(p) {
 function statusClass(status) { return status === 'SUITABLE' ? 'positive' : status === 'UNSUITABLE' ? 'negative' : 'conditional'; }
 
 function routeCard(route, main = false) {
-  const requirement = route.thresholdEur == null ? 'Точный финансовый порог требует индивидуального расчёта по документам и выбранному варианту.' : `Минимальный подтверждаемый доход: ${currency(route.thresholdEur, 'EUR')} в месяц.`;
-  const blockers = route.blockers?.length ? `<ul>${route.blockers.map((item) => `<li>${html(item)}</li>`).join('')}</ul>` : '';
+  const incomeTypeBlocked = route.incomeTypeFit === 'DOES_NOT_MEET';
+  const requirement = describeIncomeRequirement(route, currency);
+  const visibleBlockers = (route.blockers || []).filter((item) => !incomeTypeBlocked || !item.includes('Тип дохода несовместим'));
+  const blockers = visibleBlockers.length ? `<ul>${visibleBlockers.map((item) => `<li>${html(item)}</li>`).join('')}</ul>` : '';
   return `<article class="route-result ${main ? 'best' : ''}"><div><span class="status-pill ${statusClass(route.routeStatus)}">${html(STATUS_LABELS_RU[route.routeStatus])}</span><h3>${html(route.routeName)}</h3><p>Расчёт выполнен по гражданству РФ.</p></div><p>${html(requirement)}</p>${blockers}</article>`;
 }
 
 function renderResult(calculation, changed = false) {
   const best = calculation.bestRoute;
-  const followUps = [...new Map(calculation.routes.flatMap((route) => route.followUpQuestions || []).map((question) => [question.code, { ...question, routeName: calculation.routes.find((route) => route.followUpQuestions?.some((item) => item.code === question.code))?.routeName }])).values()];
+  const followUps = collectEligibleFollowUps(calculation);
   const children = calculation.profile.children?.length || 0;
   const family = `${calculation.profile.adults} ${calculation.profile.adults === 1 ? 'взрослый' : 'взрослых'}${children ? `, ${children} ${children === 1 ? 'ребёнок' : 'детей'}` : ''}`;
   const followUpHtml = followUps.length ? `<section class="follow-up-card"><h3>Нужно одно уточнение</h3><p>Оно относится только к варианту «${html(followUps[0].routeName)}» и может изменить предварительный статус.</p><label class="field"><span>Как планируете подтвердить участие в системе социального страхования Испании?</span><select id="socialSecurityPlan"><option value="">Не знаю</option><option value="REGISTER_IN_SPAIN">Зарегистрироваться в Испании</option><option value="FOREIGN_COVERAGE_CERTIFICATE">Использовать подтверждение из другой страны</option><option value="SELF_EMPLOYED_SPAIN">Оформиться как самостоятельный работник в Испании</option></select></label><button id="recalculate" class="primary-button" type="button">Уточнить результат</button></section>` : '';
-  $('#result').innerHTML = `<div class="result-head"><div><h2>${changed ? 'Результат обновлён после уточнения' : 'Предварительный результат по Испании'}</h2><p>Лучший вариант: <b>${html(best?.routeName || 'не определён')}</b></p></div><span class="status-pill ${statusClass(best?.routeStatus)}">${html(STATUS_LABELS_RU[best?.routeStatus] || 'Требует проверки')}</span></div>
+  const { heading: resultHeading, routeLabel } = describeResultIntro(calculation.routes, changed);
+  $('#result').innerHTML = `<div class="result-head"><div><h2>${resultHeading}</h2><p>${routeLabel}: <b>${html(best?.routeName || 'не определён')}</b></p></div><span class="status-pill ${statusClass(best?.routeStatus)}">${html(STATUS_LABELS_RU[best?.routeStatus] || 'Требует проверки')}</span></div>
     <div class="kpi-grid three"><div class="kpi"><span>Состав семьи</span><b>${html(family)}</b></div><div class="kpi"><span>Подтверждаемый доход после пересчёта</span><b>${best?.incomeEur == null ? 'Не рассчитан' : currency(best.incomeEur, 'EUR')}</b></div><div class="kpi"><span>Необходимый доход</span><b>${best?.thresholdEur == null ? 'Нужен расчёт по документам' : currency(best.thresholdEur, 'EUR')}</b></div></div>
-    ${best ? routeCard(best, true) : ''}${followUpHtml}<section><div class="section-title-row"><div><h3>Другие проверенные варианты</h3><p>Ни один вариант не исключается заранее из-за выбранного типа дохода.</p></div></div><div class="alternative-routes">${calculation.routes.filter((route) => route.routeId !== best?.routeId).map((route) => routeCard(route)).join('')}</div></section>
+    ${best ? routeCard(best, true) : ''}${followUpHtml}<section><div class="section-title-row"><div><h3>Другие проверенные варианты</h3><p>Каждый вариант проверен отдельно по вашим фактическим ответам.</p></div></div><div class="alternative-routes">${calculation.routes.filter((route) => route.routeId !== best?.routeId).map((route) => routeCard(route)).join('')}</div></section>
     <section><div class="section-title-row"><div><h3>Практический семейный бюджет</h3><p>Обычные расходы семьи; школа учитывается отдельно, только если она нужна.</p></div></div>${calculation.recommendedCity ? `<div class="city-card recommended"><h4>${html(calculation.recommendedCity.cityName)}</h4><strong>${currency(calculation.recommendedCity.costUsd)}/мес</strong></div>` : '<p>Город не определён.</p>'}</section>
     <p class="result-note">Расчёт: ${html(calculation.calculatedAt?.slice(0, 10))}. Курс валют: ${html(calculationContext.fx.as_of?.slice(0, 10))}, источник ${html(calculationContext.fx.source)}. Результат предварительный и не является юридическим обещанием.</p>`;
   if (followUps.length) $('#recalculate').addEventListener('click', recalculateWithFollowUp);
@@ -182,6 +189,7 @@ function showToast(message) { const toast = $('#toast'); toast.textContent = mes
 function draft() { return { version: 1, savedAt: new Date().toISOString(), answers: collectAnswers() }; }
 
 function setRadio(name, val) { const input = $(`input[name="${name}"][value="${CSS.escape(String(val))}"]`); if (input) input.checked = true; }
+function setCheckboxes(name, values = []) { $$(`input[name="${name}"]`).forEach((input) => { input.checked = values.includes(input.value); }); }
 
 function restoreDraft() {
   try {
@@ -190,7 +198,7 @@ function restoreDraft() {
     const a = stored.answers;
     const simple = ['currentCountry','currentStatus','relationshipType','primaryType','primarySourceCountry','primaryBankCountry','primaryAmount','primaryCurrency','primaryEvidence','additionalType','additionalSourceCountry','additionalBankCountry','additionalAmount','additionalCurrency','additionalEvidence','partnerType','partnerSourceCountry','partnerBankCountry','partnerAmount','partnerCurrency','partnerEvidence','longTermGoal','physicalPresence','languageExamReadiness','keepRuCitizenship','monthlyBudget','budgetCurrency','citySize','climate','dogBreed','otherPetNotes','medicalDetails'];
     simple.forEach((id) => { if ($(`#${id}`) && a[id] != null) $(`#${id}`).value = a[id]; });
-    setRadio('applicationMethod', a.applicationMethod); setRadio('partnerIncluded', a.partnerIncluded ? 'YES' : 'NO'); setRadio('petType', a.petTypes?.[0]);
+    setCheckboxes('applicationMethod', a.applicationMethods || (a.applicationMethod ? [a.applicationMethod] : [])); setRadio('hasPartner', (a.hasPartner ?? a.partnerIncluded) ? 'YES' : 'NO'); setRadio('partnerIncluded', a.partnerIncluded ? 'YES' : 'NO'); setRadio('petType', a.petTypes?.[0]);
     ['lgbtEnabled','schoolNeeded','hasAdditionalIncome','partnerHasIncome','budgetUnknown','medicalEnabled','specificMedicineRequired','regularCareRequired'].forEach((id) => { if ($(`#${id}`)) $(`#${id}`).checked = Boolean(a[id]); });
     $('#childrenCount').value = String(a.childAges?.length ?? ''); syncChildren(); $$('#childAges input').forEach((input, index) => { input.value = a.childAges[index] ?? ''; });
     $('#specialCircumstance').value = a.specialCircumstances?.[0] || '';
@@ -206,6 +214,11 @@ $('#gateNo').addEventListener('click', () => { $('#gateNotice').hidden = false; 
 $('#nextStep').addEventListener('click', () => { if (validateStep(currentStep)) showStep(currentStep + 1); });
 $('#prevStep').addEventListener('click', () => showStep(currentStep - 1));
 $('#childrenCount').addEventListener('change', () => { syncChildren(); renderProfileSummary(profile()); });
+$$('input[name="applicationMethod"]').forEach((input) => input.addEventListener('change', () => {
+  const methods = $$('input[name="applicationMethod"]');
+  if (input.value === 'ANY' && input.checked) methods.forEach((item) => { if (item !== input) item.checked = false; });
+  else if (input.checked) methods.find((item) => item.value === 'ANY').checked = false;
+}));
 form.addEventListener('change', () => { syncConditional(); renderProfileSummary(profile()); });
 form.addEventListener('input', () => renderProfileSummary(profile()));
 form.addEventListener('submit', (event) => {

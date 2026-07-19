@@ -34,7 +34,7 @@ export function buildUserProfile(answers) {
       current_country: answers.currentCountry?.toUpperCase(),
       current_status: answers.currentStatus,
     },
-    application_preferences: { methods: [answers.applicationMethod] },
+    application_preferences: { methods: answers.applicationMethods?.length ? answers.applicationMethods : answers.applicationMethod ? [answers.applicationMethod] : [] },
     family: {
       adults_count: partnerIncluded ? 2 : 1,
       partner_included: partnerIncluded,
@@ -88,7 +88,7 @@ export function validateUserProfile(profile) {
   if (JSON.stringify(profile?.citizenships) !== '["RU"]') add('citizenships', 'Анкета предназначена только для граждан РФ.');
   if (!code(profile?.residence?.current_country)) add('currentCountry', 'Укажите двухбуквенный код текущей страны.');
   if (!profile?.residence?.current_status) add('currentStatus', 'Укажите ваш текущий статус.');
-  if (!profile?.application_preferences?.methods?.[0]) add('applicationMethod', 'Выберите подходящий способ подачи.');
+  if (!profile?.application_preferences?.methods?.[0]) add('applicationMethods', 'Выберите хотя бы один способ подачи.');
   if (![1, 2].includes(profile?.family?.adults_count)) add('partnerIncluded', 'Укажите, переезжает ли партнёр.');
   if (profile?.family?.partner_included && !profile.family.relationship_type) add('relationshipType', 'Укажите, как оформлены отношения.');
   if ((profile?.family?.children || []).some((child) => !Number.isInteger(child.age_years) || child.age_years < 0 || child.age_years > 25)) add('childAges', 'Укажите возраст каждого ребёнка от 0 до 25 лет.');
@@ -170,4 +170,25 @@ export function validateAgainstSchema(value, schema, rootSchema = schema, path =
     }
   }
   return errors;
+}
+
+export function collectEligibleFollowUps(calculation) {
+  const eligibleStatuses = new Set(['SUITABLE', 'SUITABLE_WITH_CONDITIONS', 'PRELIMINARY_SUITABLE']);
+  const entries = (calculation?.routes || []).filter((route) => eligibleStatuses.has(route.routeStatus))
+    .flatMap((route) => (route.followUpQuestions || []).map((question) => [question.code, { ...question, routeName: route.routeName }]));
+  return [...new Map(entries).values()];
+}
+
+export function describeIncomeRequirement(route, formatCurrency) {
+  if (route?.incomeTypeFit === 'DOES_NOT_MEET') return 'Ваш тип дохода не принимается для этого варианта. Сумма дохода не является причиной этого вывода.';
+  if (route?.thresholdEur == null) return 'Финансовое требование для этого варианта не выражено единым порогом и проверяется по документам.';
+  return `Минимальный подтверждаемый доход: ${formatCurrency(route.thresholdEur, 'EUR')} в месяц.`;
+}
+
+export function describeResultIntro(routes, changed = false) {
+  const allUnsuitable = routes?.length > 0 && routes.every((route) => route.routeStatus === 'UNSUITABLE');
+  return {
+    heading: changed ? 'Результат обновлён после уточнения' : allUnsuitable ? 'Сейчас подходящих вариантов не найдено' : 'Предварительный результат по Испании',
+    routeLabel: allUnsuitable ? 'Наиболее близкий вариант при изменении условий' : 'Лучший доступный вариант',
+  };
 }
