@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Универсальная анкета Immigration Matcher для граждан РФ">
+  <meta name="theme-color" content="#071e3d">
+  <title>Анкета — Immigration Matcher</title>
+  <link rel="stylesheet" href="../pilot/styles.css">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="site-header"><div class="nav-shell"><a class="brand" href="../" aria-label="Immigration Matcher — главная"><span class="brand-mark" aria-hidden="true"><span></span></span><span>Immigration <em>Matcher</em></span></a><a class="catalog-link" href="../">Каталог стран</a><div class="secure-note"><span aria-hidden="true">◇</span> Данные остаются в браузере</div></div></header>
+  <section class="hero"><div class="hero-map" aria-hidden="true"></div><div class="hero-inner"><h1 id="heroTitle">Подберём вариант иммиграции</h1><p id="heroSubtitle">Ответьте на вопросы о вашей ситуации — мы проверим доступные варианты Испании без заранее выбранного победителя.</p></div></section>
+
+  <main class="page-shell">
+    <section id="citizenshipGate" class="eligibility-gate surface" aria-labelledby="gateTitle">
+      <div class="step-heading"><span class="step-number">1</span><div><h2 id="gateTitle">У вас есть гражданство РФ?</h2><p>Анкета и расчёты текущей версии предназначены только для граждан Российской Федерации.</p></div></div>
+      <div class="gate-actions"><button id="gateYes" class="primary-button" type="button">Да, есть</button><button id="gateNo" class="secondary-button" type="button">Нет</button></div>
+      <div id="gateNotice" class="citizenship-notice" role="status" tabindex="-1" hidden><h3>Информация на сайте вам не подходит</h3><p>Вопросы и результаты предназначены только для граждан РФ. Для других гражданств эти сведения неприменимы.</p></div>
+    </section>
+
+    <section id="questionnaireView" class="matcher-layout" hidden>
+      <form id="matcherForm" class="surface wizard-card" novalidate>
+        <div class="wizard-head"><div class="step-label"><b id="stepLabel">Шаг 1 из 7</b></div><div class="progress-track"><span id="progressBar"></span></div><div class="duration">◷ 5–8 минут</div></div>
+        <div id="formError" class="form-error" role="alert" hidden></div>
+
+        <section class="wizard-step is-active" data-step="1">
+          <div class="step-heading"><span class="step-number">1</span><div><h2>Где вы сейчас</h2><p>Фактический статус помогает понять, откуда можно подать заявление.</p></div></div>
+          <div class="field-grid two-col">
+            <label class="field"><span>Текущая страна</span><input id="currentCountry" maxlength="2" placeholder="Например, PH или RU" autocomplete="country"></label>
+            <label class="field"><span>Ваш статус в этой стране</span><select id="currentStatus"><option value="">Не выбрано</option><option value="CITIZENSHIP">Гражданство</option><option value="PERMANENT_RESIDENCE">ПМЖ</option><option value="TEMPORARY_RESIDENCE">ВНЖ</option><option value="WORK_OR_FAMILY_VISA">Рабочая или семейная виза</option><option value="STUDENT_STATUS">Студенческий статус</option><option value="TOURIST_OR_VISA_FREE">Туристическая виза или безвизовый въезд</option><option value="OTHER_LEGAL_STATUS">Другой законный статус</option><option value="NO_LEGAL_STATUS">Нет законного статуса</option></select></label>
+          </div>
+          <fieldset class="choice-group"><legend>Какие способы подачи готовы рассматривать?</legend><div class="choice-grid two-choice"><label class="choice-card"><input type="radio" name="applicationMethod" value="CURRENT_COUNTRY"><span>Из страны, где я сейчас<small>Если мой текущий статус позволяет</small></span></label><label class="choice-card"><input type="radio" name="applicationMethod" value="RUSSIA"><span>Из России<small>Готовы вернуться для подачи</small></span></label><label class="choice-card"><input type="radio" name="applicationMethod" value="IN_COUNTRY_AFTER_ENTRY"><span>После въезда в страну<small>Если правила это допускают</small></span></label><label class="choice-card"><input type="radio" name="applicationMethod" value="ANY"><span>Рассмотрю любой способ<small>Проверим все доступные варианты</small></span></label></div></fieldset>
+        </section>
+
+        <section class="wizard-step" data-step="2" hidden>
+          <div class="step-heading"><span class="step-number">2</span><div><h2>Кто переезжает</h2><p>Дети сохраняются отдельно с возрастом — они не превращаются во «второго взрослого».</p></div></div>
+          <fieldset class="choice-group"><legend>Партнёр переезжает вместе с вами?</legend><div class="segmented"><label><input type="radio" name="partnerIncluded" value="NO"><span>Нет</span></label><label><input type="radio" name="partnerIncluded" value="YES"><span>Да</span></label></div></fieldset>
+          <div id="partnerBlock" class="conditional-card" hidden><div class="field-grid two-col"><label class="field"><span>Как оформлены отношения</span><select id="relationshipType"><option value="">Не выбрано</option><option value="MARRIAGE">Официальный брак</option><option value="REGISTERED_PARTNERSHIP">Зарегистрированное партнёрство</option><option value="UNREGISTERED_PARTNER">Незарегистрированные отношения</option></select></label><label class="toggle-row"><span><b>Учитывать признание однополой семьи</b><small>Только с вашего явного согласия</small></span><input id="lgbtEnabled" type="checkbox"><i></i></label></div></div>
+          <label class="field compact-field"><span>Сколько детей переезжает?</span><select id="childrenCount"><option value="">Не выбрано</option><option value="0">Нет детей</option><option value="1">1 ребёнок</option><option value="2">2 ребёнка</option><option value="3">3 ребёнка</option></select></label>
+          <div id="childrenBlock" class="conditional-card" hidden><div id="childAges" class="field-grid"></div><label class="toggle-row"><span><b>Нужна школа</b><small>Стоимость школы считаем отдельно от семейного бюджета</small></span><input id="schoolNeeded" type="checkbox"><i></i></label></div>
+        </section>
+
+        <section class="wizard-step" data-step="3" hidden>
+          <div class="step-heading"><span class="step-number">3</span><div><h2>Доход и документы</h2><p>Укажите сумму, которую реально можно подтвердить договором, выписками или налоговыми документами.</p></div></div>
+          <div class="income-block"><h3>Основной доход заявителя</h3><div class="field-grid two-col">
+            <label class="field"><span>Тип дохода</span><select id="primaryType"><option value="">Не выбрано</option><option value="REMOTE_EMPLOYMENT">Удалённая работа по найму</option><option value="CONTRACTOR">Контракты</option><option value="FREELANCE_OR_SELF_EMPLOYED">Фриланс или самозанятость</option><option value="SOLE_PROPRIETOR">ИП</option><option value="COMPANY_OWNER">Владелец компании</option><option value="PASSIVE_INCOME">Пассивный доход</option><option value="OTHER_REGULAR_REMOTE_INCOME">Другой регулярный доход</option></select></label>
+            <label class="field"><span>Страна источника дохода</span><input id="primarySourceCountry" maxlength="2" placeholder="Например, US"></label>
+            <label class="field"><span>Страна банковского счёта</span><input id="primaryBankCountry" maxlength="2" placeholder="Например, GE"></label>
+            <label class="field"><span>Подтверждаемая сумма в месяц</span><div class="money-combo"><input id="primaryAmount" type="number" min="0" placeholder="3000"><select id="primaryCurrency"><option>USD</option><option>EUR</option><option>RUB</option></select></div></label>
+            <label class="field"><span>Насколько полно подтверждается доход</span><select id="primaryEvidence"><option value="">Не выбрано</option><option value="FULL">Полностью</option><option value="PARTIAL">Частично</option><option value="NONE">Пока нет документов</option></select></label>
+          </div></div>
+          <label class="toggle-row"><span><b>Есть ещё один источник дохода</b><small>Добавим его отдельно, не смешивая с основным</small></span><input id="hasAdditionalIncome" type="checkbox"><i></i></label>
+          <div id="additionalIncomeBlock" class="conditional-card" hidden></div>
+          <div id="partnerIncomeQuestion" hidden><label class="toggle-row"><span><b>У партнёра есть подтверждаемый доход</b><small>Проверим, можно ли учитывать его в семейном пороге</small></span><input id="partnerHasIncome" type="checkbox"><i></i></label><div id="partnerIncomeBlock" class="conditional-card" hidden></div></div>
+        </section>
+
+        <section class="wizard-step" data-step="4" hidden>
+          <div class="step-heading"><span class="step-number">4</span><div><h2>Долгосрочная цель</h2><p>Это не выбирает визу или программу — система всё равно проверит каждый вариант отдельно.</p></div></div>
+          <label class="field"><span>Какой результат вам нужен?</span><select id="longTermGoal"><option value="">Не выбрано</option><option value="TEMPORARY_RESIDENCE_SUFFICIENT">Временного ВНЖ достаточно</option><option value="PR_REQUIRED">ПМЖ обязательно</option><option value="CITIZENSHIP_DESIRED">Гражданство желательно</option><option value="CITIZENSHIP_MAIN_GOAL">Гражданство — главная цель</option><option value="CITIZENSHIP_REQUIRED">Гражданство обязательно</option><option value="UNDECIDED">Пока не решил(а)</option></select></label>
+          <div class="field-grid two-col"><label class="field"><span>Сколько времени готовы жить в стране?</span><select id="physicalPresence"><option value="">Не выбрано</option><option value="MOST_OF_YEAR">Большую часть года</option><option value="AT_LEAST_8_MONTHS">Не меньше 8 месяцев</option><option value="AT_LEAST_6_MONTHS">Не меньше 6 месяцев</option><option value="LESS_THAN_6_MONTHS">Меньше 6 месяцев</option><option value="DEPENDS_ON_COUNTRY">Зависит от страны</option></select></label><label class="field"><span>Насколько важно сохранить гражданство РФ?</span><select id="keepRuCitizenship"><option value="">Не выбрано</option><option value="REQUIRED">Обязательно</option><option value="DESIRABLE">Желательно</option><option value="NOT_IMPORTANT">Не является условием</option><option value="WILLING_TO_RENOUNCE">Готов(а) отказаться при необходимости</option></select></label></div>
+          <div id="languageBlock" class="conditional-card" hidden><label class="field"><span>Готовы сдавать экзамен по местному языку для ПМЖ или гражданства?</span><select id="languageExamReadiness"><option value="">Не выбрано</option><option value="YES">Да</option><option value="BASIC_ONLY">Готов(а) к базовому уровню</option><option value="DEPENDS_ON_LANGUAGE">Зависит от языка и требований</option><option value="NO">Нет</option></select></label></div>
+        </section>
+
+        <section class="wizard-step" data-step="5" hidden>
+          <div class="step-heading"><span class="step-number">5</span><div><h2>Семейный бюджет и условия жизни</h2><p>Бюджет включает аренду, продукты, транспорт, медицину и обычные расходы. Школа считается отдельно.</p></div></div>
+          <div class="field-grid two-col"><label class="field"><span>Максимальный семейный бюджет в месяц</span><div class="money-combo"><input id="monthlyBudget" type="number" min="0" placeholder="2500"><select id="budgetCurrency"><option>USD</option><option>EUR</option><option>RUB</option></select></div></label><label class="toggle-row"><span><b>Пока не знаю бюджет</b><small>Юридический расчёт всё равно будет выполнен</small></span><input id="budgetUnknown" type="checkbox"><i></i></label><label class="field"><span>Размер города</span><select id="citySize"><option value="">Не выбрано</option><option value="ANY">Неважно</option><option value="LARGE">Крупный</option><option value="MEDIUM">Средний</option><option value="SMALL">Небольшой</option></select></label><label class="field"><span>Предпочитаемый климат</span><select id="climate"><option value="">Не выбрано</option><option value="ANY">Неважно</option><option value="COOL">Прохладный</option><option value="TEMPERATE">Умеренный</option><option value="WARM">Тёплый</option><option value="HOT">Жаркий</option></select></label></div>
+          <fieldset class="choice-group"><legend>Домашние животные</legend><div class="segmented four"><label><input type="radio" name="petType" value="NONE"><span>Нет</span></label><label><input type="radio" name="petType" value="DOG"><span>Собака</span></label><label><input type="radio" name="petType" value="CAT"><span>Кошка</span></label><label><input type="radio" name="petType" value="OTHER"><span>Другие</span></label></div></fieldset>
+          <div id="dogBlock" class="conditional-card" hidden><label class="field"><span>Порода собаки — можно не указывать</span><input id="dogBreed" maxlength="120" placeholder="Например, корги"></label></div><div id="otherPetBlock" class="conditional-card" hidden><label class="field"><span>Какие животные?</span><input id="otherPetNotes" maxlength="500"></label></div>
+        </section>
+
+        <section class="wizard-step" data-step="6" hidden>
+          <div class="step-heading"><span class="step-number">6</span><div><h2>Особые обстоятельства</h2><p>Эти ответы не создают автоматический отказ — при необходимости результат укажет на индивидуальную проверку.</p></div></div>
+          <label class="field"><span>Есть ли обстоятельства, которые важно учесть?</span><select id="specialCircumstance"><option value="">Не выбрано</option><option value="NONE">Нет</option><option value="CRIMINAL_RECORD">Судимость</option><option value="DEPORTATION">Депортация</option><option value="ENTRY_BAN">Запрет на въезд</option><option value="SERIOUS_VISA_VIOLATION">Серьёзное нарушение визового режима</option><option value="PREFER_NOT_TO_SAY">Предпочитаю не отвечать</option></select></label>
+          <label class="toggle-row"><span><b>Добавить медицинские потребности</b><small>Необязательный практический модуль</small></span><input id="medicalEnabled" type="checkbox"><i></i></label>
+          <div id="medicalBlock" class="conditional-card" hidden><div class="toggle-grid"><label class="toggle-row"><span><b>Нужно конкретное лекарство</b></span><input id="specificMedicineRequired" type="checkbox"><i></i></label><label class="toggle-row"><span><b>Нужен регулярный врач</b></span><input id="regularCareRequired" type="checkbox"><i></i></label></div><label class="field"><span>Комментарий — необязательно</span><textarea id="medicalDetails" maxlength="1000"></textarea></label></div>
+        </section>
+
+        <section class="wizard-step" data-step="7" hidden><div class="step-heading"><span class="step-number">7</span><div><h2>Проверьте профиль</h2><p>После расчёта покажем лучший и альтернативные варианты, требования и недостающие данные.</p></div></div><div id="reviewSummary" class="review-summary"></div><div class="privacy-box"><span>◇</span><p><b>Ответы хранятся только в вашем браузере.</b><br>Расчёт предварительный и не заменяет юридическую проверку перед подачей.</p></div></section>
+
+        <div class="wizard-actions"><div class="draft-actions"><button id="saveDraft" class="text-button" type="button">Сохранить черновик</button><button id="clearDraft" class="text-button muted-action" type="button">Очистить</button></div><div><button id="prevStep" class="secondary-button" type="button" hidden>Назад</button><button id="nextStep" class="primary-button" type="button">Продолжить →</button><button id="calculate" class="primary-button" type="submit" hidden>Получить результат →</button></div></div>
+      </form>
+      <aside class="sidebar"><section class="surface profile-card"><div class="card-title"><h2>Ваш профиль</h2><span class="round-icon">○</span></div><div id="profileSummary" class="summary-list"><p class="empty-profile-message">Профиль пока не заполнен</p></div></section><section class="benefit-card"><h2>Как работает расчёт</h2><ul><li><span>1</span><div><b>Проверяем каждый вариант</b><small>Источник дохода не назначает победителя заранее.</small></div></li><li><span>2</span><div><b>Отделяем право от удобства</b><small>Юридические требования и семейный бюджет оцениваются отдельно.</small></div></li><li><span>3</span><div><b>Уточняем только нужное</b><small>Технические вопросы появляются после первого расчёта.</small></div></li></ul></section></aside>
+    </section>
+
+    <section id="resultView" class="result-layout" hidden><div id="result" class="surface result-main"></div><aside class="sidebar"><section class="surface profile-card"><div class="card-title"><h2>Ваш профиль</h2></div><div id="resultProfileSummary" class="summary-list"></div></section><section class="benefit-card next-card"><h2>Что дальше</h2><button id="editProfile" class="secondary-button full" type="button">Изменить ответы</button><a class="outline-link" href="../pilot/">Открыть старый пилот</a></section></aside></section>
+  </main>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
