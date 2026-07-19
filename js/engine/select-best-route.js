@@ -20,6 +20,9 @@ export function compareRouteEvaluations(a, b) {
   for (let index = 0; index < left.length; index += 1) {
     if (left[index] !== right[index]) return right[index] - left[index];
   }
+  const nationalityPreference = (value) => value === 'RU' ? 1 : 0;
+  const nationalityDifference = nationalityPreference(b.applicationNationality) - nationalityPreference(a.applicationNationality);
+  if (nationalityDifference) return nationalityDifference;
   return String(a.routeId ?? '').localeCompare(String(b.routeId ?? ''));
 }
 

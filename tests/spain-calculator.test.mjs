@@ -10,14 +10,14 @@ import {
 } from '../js/spain-calculator.js';
 
 const data = JSON.parse(await readFile(new URL('../data/spain-research-v2.2.json', import.meta.url), 'utf8'));
+const universalSamples = JSON.parse(await readFile(new URL('./fixtures/universal-profile-samples-v1.json', import.meta.url), 'utf8'));
 
 const baseProfile = {
   applicationNationality: 'RU',
   currentLocation: 'THIRD_COUNTRY',
   legalResidence: true,
-  eurUsdRate: 1.144,
   bankCountry: 'OTHER',
-  socialSecurityPlan: 'REGISTER_SPAIN',
+  socialSecurityPlan: 'REGISTER_IN_SPAIN',
   adults: 1,
   children: 0,
   relationshipType: 'NONE',
@@ -34,7 +34,24 @@ const baseProfile = {
   medicineRequired: false,
 };
 
-const calculate = (overrides) => calculateSpain({ ...baseProfile, ...overrides }, data);
+const context = { calculation_date: '2026-07-19T12:00:00Z', engine_version: '2.1.0', fx: { base_currency: 'USD', rates: { EUR: 0.874, RUB: 80 }, source: 'test', as_of: '2026-07-19T00:00:00Z', max_age_hours: 96 } };
+const currencyContext = { ...context, fx: { ...context.fx, rates: { EUR: 0.8, RUB: 80 } } };
+const calculate = (overrides) => calculateSpain({ ...baseProfile, ...overrides }, data, context);
+const strictProfile = (overrides = {}) => {
+  const source = structuredClone(universalSamples[0]);
+  source.citizenships = ['RU'];
+  source.residence = { current_country: 'RU', current_status: 'CITIZENSHIP' };
+  source.application_preferences = { methods: ['RUSSIA'] };
+  source.family = { adults_count: 1, partner_included: false, relationship_type: null, children: [], school_needed: false };
+  source.lgbt = { enabled: false, consent_for_personalization: false };
+  source.income.primary.type = 'PASSIVE_INCOME';
+  source.income.primary.monthly_provable = { amount: 5000, currency: 'USD' };
+  source.goal = { long_term: 'TEMPORARY_RESIDENCE_SUFFICIENT', physical_presence: 'MOST_OF_YEAR', language_exam_readiness: 'YES', keep_russian_citizenship: 'DESIRABLE' };
+  source.preferences.monthly_budget = null;
+  source.preferences.city_size = 'ANY';
+  source.route_specific_answers = {};
+  return Object.assign(source, overrides);
+};
 
 test('conflict resolution chooses the strictest status inside one route', () => {
   assert.equal(
@@ -54,7 +71,7 @@ test('best-variant selection uses a separate preference order', () => {
 test('remote employee with sufficient converted income selects DNV', () => {
   const result = calculate({ plannedBasis: 'REMOTE_EMPLOYEE', monthlyIncomeUsd: 3200 });
   assert.equal(result.bestRoute.routeId, 'ES_DNV');
-  assert.equal(result.bestRoute.routeStatus, 'INSUFFICIENT_COUNTRY_DATA');
+  assert.equal(result.bestRoute.routeStatus, 'SUITABLE_WITH_CONDITIONS');
 });
 
 test('currency conversion prevents comparing USD directly with an EUR threshold', () => {
@@ -87,7 +104,7 @@ test('Spanish job offer exposes the unresolved 2026 salary threshold', () => {
   assert.equal(result.bestRoute.routeStatus, 'INSUFFICIENT_COUNTRY_DATA');
 });
 
-test('citizenship goal conflicts with mandatory preservation of Russian citizenship', () => {
+test('unknown multiple-citizenship rule does not invent a hard conflict', () => {
   const result = calculate({
     plannedBasis: 'REMOTE_EMPLOYEE',
     monthlyIncomeUsd: 5000,
@@ -95,8 +112,7 @@ test('citizenship goal conflicts with mandatory preservation of Russian citizens
     keepRuCitizenship: 'REQUIRED',
   });
   assert.equal(result.bestRoute.routeId, 'ES_DNV');
-  assert.equal(result.bestRoute.routeStatus, 'UNSUITABLE');
-  assert.ok(result.bestRoute.blockers.some((message) => message.includes('сохранение указано как обязательное')));
+  assert.equal(result.bestRoute.routeStatus, 'INSUFFICIENT_COUNTRY_DATA');
 });
 
 test('a family budget below city costs produces a practical mismatch group', () => {
@@ -110,7 +126,7 @@ test('a family budget below city costs produces a practical mismatch group', () 
     schoolNeeded: true,
     monthlyBudgetUsd: 3000,
   });
-  assert.equal(result.bestRoute.routeStatus, 'INSUFFICIENT_COUNTRY_DATA');
+  assert.equal(result.bestRoute.routeStatus, 'SUITABLE_WITH_CONDITIONS');
   assert.equal(result.country.group, 'LEGAL_BUT_PRACTICALLY_UNSUITABLE');
 });
 
@@ -121,10 +137,10 @@ test('all six Spain routes are independently evaluated', () => {
   assert.ok(result.routes.every((route) => !Object.hasOwn(route, 'selection' + 'Score')));
 });
 
-test('family keeps adults and children as separate counts', () => {
-  const result = calculateSpain({ ...baseProfile, family: { adults_count: 2, children: [{ age_years: 13 }] }, plannedBasis: 'PASSIVE_INCOME', monthlyIncomeUsd: 5000 }, data);
+test('legacy family keeps adults and children as separate values', () => {
+  const result = calculateSpain({ ...baseProfile, adults: 2, children: 1, plannedBasis: 'PASSIVE_INCOME', monthlyIncomeUsd: 5000 }, data, context);
   assert.equal(result.profile.adults, 2);
-  assert.equal(result.profile.children, 1);
+  assert.equal(result.profile.children.length, 1);
 });
 
 test('legacy wrapper re-exports public Russian labels', () => {
@@ -135,4 +151,187 @@ test('legacy wrapper re-exports public Russian labels', () => {
 test('canonical conflict and selection orders remain independent', () => {
   assert.equal(resolveStatusConflict(['INSUFFICIENT_COUNTRY_DATA', 'INDIVIDUAL_REVIEW_REQUIRED']), 'INDIVIDUAL_REVIEW_REQUIRED');
   assert.equal(selectBestVariant([{ routeId: 'review', routeStatus: 'INDIVIDUAL_REVIEW_REQUIRED' }, { routeId: 'missing', routeStatus: 'INSUFFICIENT_COUNTRY_DATA' }]).routeId, 'missing');
+});
+
+test('missing DNV social-security answer creates a follow-up question', () => {
+  const result = calculate({ plannedBasis: 'REMOTE_EMPLOYEE', monthlyIncomeUsd: 5000, socialSecurityPlan: null });
+  assert.equal(result.bestRoute.routeStatus, 'PRELIMINARY_SUITABLE');
+  assert.equal(result.bestRoute.followUpQuestions[0].code, 'ES_DNV_SOCIAL_SECURITY_PLAN');
+});
+
+test('foreign certificate for RU remains an explicit country-data gap', () => {
+  const result = calculate({ plannedBasis: 'REMOTE_EMPLOYEE', monthlyIncomeUsd: 5000, socialSecurityPlan: 'FOREIGN_CERTIFICATE' });
+  assert.equal(result.bestRoute.routeStatus, 'INSUFFICIENT_COUNTRY_DATA');
+});
+
+test('unknown budget is not converted to zero', () => {
+  const result = calculate({ plannedBasis: 'PASSIVE_INCOME', monthlyIncomeUsd: 5000, monthlyBudgetUsd: null });
+  assert.equal(result.profile.monthlyBudgetUsd, null);
+  assert.equal(result.recommendedCity.budgetProximity, 'NOT_APPLICABLE');
+});
+
+test('budget proximity uses the ten-percent margin', () => {
+  const baseline = calculate({ plannedBasis: 'PASSIVE_INCOME', monthlyIncomeUsd: 5000, monthlyBudgetUsd: null });
+  const cost = baseline.recommendedCity.costUsd;
+  const within = calculate({ plannedBasis: 'PASSIVE_INCOME', monthlyIncomeUsd: 5000, monthlyBudgetUsd: cost / 0.95 });
+  const outside = calculate({ plannedBasis: 'PASSIVE_INCOME', monthlyIncomeUsd: 5000, monthlyBudgetUsd: cost / 0.8 });
+  assert.equal(within.recommendedCity.budgetProximity, 'WITHIN_MARGIN');
+  assert.equal(outside.recommendedCity.budgetProximity, 'OUTSIDE_MARGIN');
+});
+
+test('citizenship desired does not block an available initial residence', () => {
+  const result = calculate({ plannedBasis: 'PASSIVE_INCOME', monthlyIncomeUsd: 5000, goal: 'CITIZENSHIP_DESIRED', keepRuCitizenship: 'WILLING_TO_RENOUNCE' });
+  assert.notEqual(result.bestRoute.routeStatus, 'UNSUITABLE');
+});
+
+test('strict universal profile preserves children and creates citizenship variants', () => {
+  const profile = { ...universalSamples[1], route_specific_answers: { ES_DNV: { social_security_plan: 'REGISTER_IN_SPAIN' } } };
+  const result = calculateSpain(profile, data, currencyContext);
+  assert.equal(result.profile.children.length, profile.family.children.length);
+  assert.equal(result.routes.every((route) => route.citizenshipVariants.length === 2), true);
+});
+
+test('EUR income and budget are converted through the USD base with audit metadata', () => {
+  const profile = strictProfile();
+  profile.income.primary.monthly_provable = { amount: 4000, currency: 'EUR' };
+  profile.preferences.monthly_budget = { amount: 2400, currency: 'EUR' };
+  const result = calculateSpain(profile, data, currencyContext);
+  assert.equal(result.profile.monthlyIncomeUsd, 5000);
+  assert.equal(result.bestRoute.incomeEur, 4000);
+  assert.equal(result.bestRoute.incomeRequirementConversion.appliedRate, 1);
+  assert.equal(result.recommendedCity.budgetConversion.convertedAmount, 3000);
+  assert.equal(result.bestRoute.incomeRequirementConversion.rateAsOf, currencyContext.fx.as_of);
+});
+
+test('RUB income and budget are converted through configured context rates', () => {
+  const profile = strictProfile();
+  profile.income.primary.monthly_provable = { amount: 400000, currency: 'RUB' };
+  profile.preferences.monthly_budget = { amount: 240000, currency: 'RUB' };
+  const result = calculateSpain(profile, data, currencyContext);
+  assert.equal(result.profile.monthlyIncomeUsd, 5000);
+  assert.equal(result.bestRoute.incomeEur, 4000);
+  assert.equal(result.recommendedCity.budgetConversion.convertedAmount, 3000);
+  assert.equal(result.bestRoute.incomeConversion.originalCurrency, 'RUB');
+});
+
+test('missing required currency rate raises calculation-context error', () => {
+  const profile = strictProfile();
+  profile.income.primary.monthly_provable = { amount: 400000, currency: 'RUB' };
+  const noRub = { ...context, fx: { ...context.fx, rates: { EUR: 0.8 } } };
+  assert.throws(() => calculateSpain(profile, data, noRub), { code: 'CALCULATION_CONTEXT_INCOMPLETE' });
+});
+
+test('missing currency is a profile-contract error, not a missing client answer', () => {
+  const profile = strictProfile();
+  profile.income.primary.monthly_provable = { amount: 4000 };
+  assert.throws(() => calculateSpain(profile, data, context), { code: 'PROFILE_INCOMPLETE' });
+});
+
+test('actual Spain routes allow RU and third-country AR but reject EU citizenship', () => {
+  const profile = strictProfile({ citizenships: ['RU', 'AR', 'DE'] });
+  const result = calculateSpain(profile, data, context);
+  const nlv = result.routes.find((route) => route.routeId === 'ES_NLV');
+  assert.equal(nlv.citizenshipVariants.find((item) => item.applicationNationality === 'RU').applicationFit, 'MEETS');
+  assert.equal(nlv.citizenshipVariants.find((item) => item.applicationNationality === 'AR').applicationFit, 'MEETS');
+  assert.equal(nlv.citizenshipVariants.find((item) => item.applicationNationality === 'DE').blockers.some((item) => item.includes('гражданства')), true);
+});
+
+test('exact allowed nationality can win and explicitly excluded nationality cannot', () => {
+  const exactPackage = structuredClone(data);
+  exactPackage.routes = [structuredClone(data.routes.find((route) => route.route_id === 'ES_NLV'))];
+  exactPackage.routes[0].allowed_nationalities = ['AR'];
+  exactPackage.routes[0].russian_citizens_allowed = 'NO';
+  const exact = calculateSpain(strictProfile({ citizenships: ['RU', 'AR'] }), exactPackage, context);
+  assert.equal(exact.bestRoute.applicationNationality, 'AR');
+  assert.equal(exact.bestRoute.viaSecondaryNationality, true);
+  const forbidden = calculateSpain(strictProfile({ citizenships: ['RU', 'CL'] }), exactPackage, context);
+  assert.equal(forbidden.routes[0].citizenshipVariants.every((item) => item.routeStatus === 'UNSUITABLE'), true);
+});
+
+test('family relationship and same-sex checks use package fields without false gaps', () => {
+  for (const relationshipType of ['MARRIAGE', 'REGISTERED_PARTNERSHIP', 'UNREGISTERED_PARTNER']) {
+    const profile = strictProfile();
+    profile.family = { adults_count: 2, partner_included: true, relationship_type: relationshipType, children: [], school_needed: false };
+    const dnv = calculateSpain(profile, data, context).routes.find((route) => route.routeId === 'ES_DNV');
+    assert.equal(dnv.checks.some((check) => check.code === 'relationship_rule_unknown'), false);
+  }
+  for (const relationshipType of ['MARRIAGE', 'UNREGISTERED_PARTNER']) {
+    const profile = strictProfile();
+    profile.family = { adults_count: 2, partner_included: true, relationship_type: relationshipType, children: [], school_needed: false };
+    profile.lgbt = { enabled: true, consent_for_personalization: true, family_recognition_relevant: true };
+    const dnv = calculateSpain(profile, data, context).routes.find((route) => route.routeId === 'ES_DNV');
+    assert.equal(dnv.checks.some((check) => check.code === 'same_sex_family_recognized'), true);
+  }
+});
+
+test('known and missing child ages are evaluated against the actual route limit', () => {
+  const known = strictProfile();
+  known.income.primary.type = 'OTHER_REGULAR_REMOTE_INCOME';
+  known.family = { adults_count: 1, partner_included: false, relationship_type: null, children: [{ age_years: 12 }], school_needed: false };
+  const knownStudent = calculateSpain(known, data, context).routes.find((route) => route.routeId === 'ES_STUDENT');
+  assert.equal(knownStudent.checks.some((check) => check.code === 'child_age_missing'), false);
+  const missing = structuredClone(known);
+  missing.family.children = [{ age_years: null }];
+  const missingStudent = calculateSpain(missing, data, context).routes.find((route) => route.routeId === 'ES_STUDENT');
+  assert.equal(missingStudent.checks.some((check) => check.code === 'child_age_missing'), true);
+});
+
+test('CURRENT_COUNTRY inside Spain is not consular filing, while DNV in-country filing works', () => {
+  const current = strictProfile();
+  current.residence = { current_country: 'ES', current_status: 'TEMPORARY_RESIDENCE' };
+  current.application_preferences.methods = ['CURRENT_COUNTRY'];
+  const nlv = calculateSpain(current, data, context).routes.find((route) => route.routeId === 'ES_NLV');
+  assert.equal(nlv.checks.some((check) => check.code === 'current_country_is_target'), true);
+  const inside = structuredClone(current);
+  inside.application_preferences.methods = ['IN_COUNTRY_AFTER_ENTRY'];
+  inside.income.primary.type = 'REMOTE_EMPLOYMENT';
+  const dnv = calculateSpain(inside, data, context).routes.find((route) => route.routeId === 'ES_DNV');
+  assert.equal(dnv.checks.some((check) => check.code === 'in_country_method_allowed'), true);
+});
+
+test('CURRENT_COUNTRY in Russia always checks application_from_russia', () => {
+  const profile = strictProfile();
+  profile.application_preferences.methods = ['CURRENT_COUNTRY'];
+  const allowed = calculateSpain(profile, data, context).routes.find((route) => route.routeId === 'ES_NLV');
+  assert.equal(allowed.checks.some((check) => check.code === 'current_country_russia_allowed'), true);
+  const blockedPackage = structuredClone(data);
+  blockedPackage.routes.find((route) => route.route_id === 'ES_NLV').application_from_russia = 'NO';
+  const blocked = calculateSpain(profile, blockedPackage, context).routes.find((route) => route.routeId === 'ES_NLV');
+  assert.equal(blocked.checks.some((check) => check.code === 'current_country_russia_not_allowed'), true);
+});
+
+test('CURRENT_COUNTRY in a third country distinguishes residence statuses', () => {
+  const resident = strictProfile();
+  resident.residence = { current_country: 'PH', current_status: 'TEMPORARY_RESIDENCE' };
+  resident.application_preferences.methods = ['CURRENT_COUNTRY'];
+  const residentNlv = calculateSpain(resident, data, context).routes.find((route) => route.routeId === 'ES_NLV');
+  assert.equal(residentNlv.checks.some((check) => check.code === 'current_country_residence_confirmed'), true);
+  const tourist = structuredClone(resident);
+  tourist.residence.current_status = 'TOURIST_OR_VISA_FREE';
+  const touristNlv = calculateSpain(tourist, data, context).routes.find((route) => route.routeId === 'ES_NLV');
+  assert.equal(touristNlv.checks.some((check) => check.code === 'current_country_residence_required'), true);
+  const other = structuredClone(resident);
+  other.residence.current_status = 'OTHER_LEGAL_STATUS';
+  const otherNlv = calculateSpain(other, data, context).routes.find((route) => route.routeId === 'ES_NLV');
+  assert.equal(otherNlv.checks.some((check) => check.code === 'current_country_status_clarification' && check.status === 'PRELIMINARY_SUITABLE'), true);
+});
+
+test('unknown Russian nationality rule is missing country data', () => {
+  const countryPackage = structuredClone(data);
+  countryPackage.routes.find((route) => route.route_id === 'ES_NLV').russian_citizens_allowed = 'UNKNOWN';
+  const nlv = calculateSpain(strictProfile(), countryPackage, context).routes.find((route) => route.routeId === 'ES_NLV');
+  assert.equal(nlv.checks.some((check) => check.code === 'russian_nationality_rule_unknown' && check.status === 'INSUFFICIENT_COUNTRY_DATA'), true);
+  assert.equal(nlv.routeStatus, 'INSUFFICIENT_COUNTRY_DATA');
+});
+
+test('ANY evaluates every real method and cannot bypass all restrictions', () => {
+  const countryPackage = structuredClone(data);
+  const route = countryPackage.routes.find((item) => item.route_id === 'ES_NLV');
+  route.application_from_russia = 'NO';
+  const profile = strictProfile();
+  profile.residence = { current_country: 'ES', current_status: 'TEMPORARY_RESIDENCE' };
+  profile.application_preferences.methods = ['ANY'];
+  const nlv = calculateSpain(profile, countryPackage, context).routes.find((item) => item.routeId === 'ES_NLV');
+  assert.equal(nlv.applicationFit, 'DOES_NOT_MEET');
+  assert.equal(nlv.routeStatus, 'UNSUITABLE');
 });

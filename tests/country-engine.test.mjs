@@ -28,13 +28,13 @@ const packageFor = (countryId, routes = [{ route_id: `${countryId}_A`, status: '
 });
 
 test('calculateCountry supports a synthetic UY package', () => {
-  const result = calculateCountry({}, packageFor('UY'), context, adapter);
+  const result = calculateCountry({ citizenships: ['RU'] }, packageFor('UY'), context, adapter);
   assert.equal(result.country.countryId, 'UY');
   assert.equal(result.bestRoute.routeId, 'UY_A');
 });
 
 test('an alternative suitable route beats the assumed unsuitable route', () => {
-  const result = calculateCountry({}, packageFor('UY', [
+  const result = calculateCountry({ citizenships: ['RU'] }, packageFor('UY', [
     { route_id: 'UY_A', status: 'UNSUITABLE', evaluation: { scenarioAffinity: 1 } },
     { route_id: 'UY_B', status: 'SUITABLE' },
   ]), context, adapter);
@@ -55,17 +55,17 @@ test('scenario affinity is used only on complete structural equality', () => {
 
 test('missing exchange rate raises a typed context error', () => {
   const fxAdapter = { ...adapter, validateContext(profile, pkg, ctx) { if (!ctx.fx?.rates?.EUR) throw new CalculationContextError('missing EUR'); } };
-  assert.throws(() => calculateCountry({}, packageFor('UY'), { ...context, fx: { ...context.fx, rates: {} } }, fxAdapter), { code: 'CALCULATION_CONTEXT_INCOMPLETE' });
+  assert.throws(() => calculateCountry({ citizenships: ['RU'] }, packageFor('UY'), { ...context, fx: { ...context.fx, rates: {} } }, fxAdapter), { code: 'CALCULATION_CONTEXT_INCOMPLETE' });
 });
 
 test('calculateCountries returns two successful synthetic countries', () => {
-  const result = calculateCountries({}, [packageFor('AA'), packageFor('BB')], context, () => adapter);
+  const result = calculateCountries({ citizenships: ['RU'] }, [packageFor('AA'), packageFor('BB')], context, () => adapter);
   assert.equal(result.results.length, 2);
   assert.deepEqual(result.errors, []);
 });
 
 test('one country error does not destroy another result', () => {
-  const result = calculateCountries({}, [packageFor('OK'), packageFor('BAD')], context, (pkg) => pkg.country.country_id === 'BAD'
+  const result = calculateCountries({ citizenships: ['RU'] }, [packageFor('OK'), packageFor('BAD')], context, (pkg) => pkg.country.country_id === 'BAD'
     ? { ...adapter, validateContext() { throw new CalculationContextError('missing context'); } } : adapter);
   assert.equal(result.results.length, 1);
   assert.deepEqual(result.errors.map(({ countryId, code }) => ({ countryId, code })), [{ countryId: 'BAD', code: 'CALCULATION_CONTEXT_INCOMPLETE' }]);
