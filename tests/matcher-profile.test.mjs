@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { buildUserProfile, collectEligibleFollowUps, describeIncomeRequirement, describeResultIntro, validateAgainstSchema, validateUserProfile } from '../matcher/profile.js';
 import { calculateSpain } from '../js/spain-calculator.js';
+import { parseCountryCode } from '../matcher/countries.js';
 
 const profileSchema = JSON.parse(await readFile(new URL('../data/schemas/user-profile-v1.schema.json', import.meta.url), 'utf8'));
 const spainData = JSON.parse(await readFile(new URL('../data/spain-research-v2.2.json', import.meta.url), 'utf8'));
@@ -49,6 +50,12 @@ test('tourist status is not converted to residence', () => {
   assert.equal(buildUserProfile(answers()).residence.current_status, 'TOURIST_OR_VISA_FREE');
 });
 
+test('searchable country values are converted to ISO codes', () => {
+  assert.equal(parseCountryCode('PH — Филиппины'), 'PH');
+  assert.equal(parseCountryCode('Филиппины'), 'PH');
+  assert.equal(parseCountryCode('RU'), 'RU');
+});
+
 test('user can select current-country and in-country application methods together', () => {
   const profile = buildUserProfile(answers({ applicationMethods: ['CURRENT_COUNTRY', 'IN_COUNTRY_AFTER_ENTRY'] }));
   assert.deepEqual(profile.application_preferences.methods, ['CURRENT_COUNTRY', 'IN_COUNTRY_AFTER_ENTRY']);
@@ -59,6 +66,12 @@ test('income and budget retain their own currencies', () => {
   const profile = buildUserProfile(answers({ primaryAmount: '300000', primaryCurrency: 'RUB', monthlyBudget: '2200', budgetCurrency: 'EUR' }));
   assert.deepEqual(profile.income.primary.monthly_provable, { amount: 300000, currency: 'RUB' });
   assert.deepEqual(profile.preferences.monthly_budget, { amount: 2200, currency: 'EUR' });
+});
+
+test('multiple climate preferences are preserved and pass the schema', () => {
+  const profile = buildUserProfile(answers({ climates: ['TEMPERATE', 'WARM'], climate: undefined }));
+  assert.deepEqual(profile.preferences.climate, ['TEMPERATE', 'WARM']);
+  assert.deepEqual(validateAgainstSchema(profile, profileSchema), []);
 });
 
 test('unknown budget is null and does not become zero', () => {

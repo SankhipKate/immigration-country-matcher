@@ -54,7 +54,7 @@
     "preferences": {
       "monthly_budget": { "amount": 2500, "currency": "USD" },
       "city_size": "MEDIUM",
-      "climate": "COOL"
+      "climate": ["COOL"]
     },
     "pets": {
       "types": ["DOG"],
@@ -127,7 +127,7 @@
     "preferences": {
       "monthly_budget": null,
       "city_size": "ANY",
-      "climate": "WARM"
+      "climate": ["WARM"]
     },
     "pets": {
       "types": ["NONE"],
@@ -206,7 +206,7 @@
     "preferences": {
       "monthly_budget": { "amount": 2200, "currency": "USD" },
       "city_size": "SMALL",
-      "climate": "TEMPERATE"
+      "climate": ["TEMPERATE"]
     },
     "pets": {
       "types": ["CAT"],

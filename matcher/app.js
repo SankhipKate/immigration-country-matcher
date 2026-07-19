@@ -1,5 +1,6 @@
 import { calculateSpain, STATUS_LABELS_RU } from '../js/spain-calculator.js';
 import { loadCalculationContext } from '../pilot/fx-context.js';
+import { countryOptions, parseCountryCode } from './countries.js';
 import { buildUserProfile, collectEligibleFollowUps, describeIncomeRequirement, describeResultIntro, validateAgainstSchema, validateUserProfile } from './profile.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -23,14 +24,15 @@ const currency = (amount, code = 'USD') => new Intl.NumberFormat('ru-RU', { styl
 
 const INCOME_FIELDS = (prefix, title) => `<h3>${title}</h3><div class="field-grid two-col">
   <label class="field"><span>Тип дохода</span><select id="${prefix}Type"><option value="">Не выбрано</option><option value="REMOTE_EMPLOYMENT">Удалённая работа по найму</option><option value="CONTRACTOR">Контракты</option><option value="FREELANCE_OR_SELF_EMPLOYED">Фриланс или самозанятость</option><option value="SOLE_PROPRIETOR">ИП</option><option value="COMPANY_OWNER">Владелец компании</option><option value="PASSIVE_INCOME">Пассивный доход</option><option value="OTHER_REGULAR_REMOTE_INCOME">Другой регулярный доход</option></select></label>
-  <label class="field"><span>Страна источника</span><input id="${prefix}SourceCountry" maxlength="2" placeholder="Например, US"></label>
-  <label class="field"><span>Страна банка</span><input id="${prefix}BankCountry" maxlength="2" placeholder="Например, GE"></label>
+  <label class="field"><span>Страна источника</span><input id="${prefix}SourceCountry" list="countryOptions" placeholder="Начните вводить название"></label>
+  <label class="field"><span>Страна банка</span><input id="${prefix}BankCountry" list="countryOptions" placeholder="Начните вводить название"></label>
   <label class="field"><span>Подтверждаемая сумма в месяц</span><div class="money-combo"><input id="${prefix}Amount" type="number" min="0"><select id="${prefix}Currency"><option>USD</option><option>EUR</option><option>RUB</option></select></div></label>
   <label class="field"><span>Подтверждение</span><select id="${prefix}Evidence"><option value="">Не выбрано</option><option value="FULL">Полностью</option><option value="PARTIAL">Частично</option><option value="NONE">Пока нет документов</option></select></label>
 </div>`;
 
 $('#additionalIncomeBlock').innerHTML = INCOME_FIELDS('additional', 'Дополнительный доход заявителя');
 $('#partnerIncomeBlock').innerHTML = INCOME_FIELDS('partner', 'Доход партнёра');
+$('#countryOptions').innerHTML = countryOptions().map(({ label }) => `<option value="${html(label)}"></option>`).join('');
 
 function collectAnswers() {
   const childAges = $$('#childAges input').map((input) => input.value);
@@ -42,7 +44,7 @@ function collectAnswers() {
     hasAdditionalIncome: checked('hasAdditionalIncome'), additionalType: value('additionalType'), additionalSourceCountry: value('additionalSourceCountry'), additionalBankCountry: value('additionalBankCountry'), additionalAmount: value('additionalAmount'), additionalCurrency: value('additionalCurrency'), additionalEvidence: value('additionalEvidence'),
     partnerHasIncome: checked('partnerHasIncome'), partnerType: value('partnerType'), partnerSourceCountry: value('partnerSourceCountry'), partnerBankCountry: value('partnerBankCountry'), partnerAmount: value('partnerAmount'), partnerCurrency: value('partnerCurrency'), partnerEvidence: value('partnerEvidence'),
     longTermGoal: value('longTermGoal'), physicalPresence: value('physicalPresence'), languageExamReadiness: value('languageExamReadiness'), keepRuCitizenship: value('keepRuCitizenship'),
-    budgetUnknown: checked('budgetUnknown'), monthlyBudget: value('monthlyBudget'), budgetCurrency: value('budgetCurrency'), citySize: value('citySize'), climate: value('climate'),
+    budgetUnknown: checked('budgetUnknown'), monthlyBudget: value('monthlyBudget'), budgetCurrency: value('budgetCurrency'), citySize: value('citySize'), climates: checkboxValues('climate'),
     petTypes: radio('petType') ? [radio('petType')] : [], dogBreed: value('dogBreed'), otherPetNotes: value('otherPetNotes'),
     specialCircumstances: value('specialCircumstance') ? [value('specialCircumstance')] : [], medicalEnabled: checked('medicalEnabled'), specificMedicineRequired: checked('specificMedicineRequired'), regularCareRequired: checked('regularCareRequired'), medicalDetails: value('medicalDetails'),
     routeSpecificAnswers: currentProfile?.route_specific_answers || {},
@@ -82,16 +84,16 @@ function fieldError(ids, message) {
 
 function validateStep(step) {
   let error;
-  if (step === 1 && (!/^[A-Za-z]{2}$/.test(value('currentCountry')) || !value('currentStatus') || checkboxValues('applicationMethod').length === 0)) error = fieldError(['currentCountry'], 'Укажите текущую страну, фактический статус и хотя бы один способ подачи.');
+  if (step === 1 && (!parseCountryCode(value('currentCountry')) || !value('currentStatus') || checkboxValues('applicationMethod').length === 0)) error = fieldError(['currentCountry'], 'Выберите текущую страну, фактический статус и хотя бы один способ подачи.');
   if (step === 2) {
     if (!radio('hasPartner') || (radio('hasPartner') === 'YES' && !radio('partnerIncluded')) || value('childrenCount') === '') error = fieldError(['childrenCount'], 'Укажите, есть ли партнёр, переезжает ли он, и количество детей.');
     else if (radio('partnerIncluded') === 'YES' && !value('relationshipType')) error = fieldError(['relationshipType'], 'Укажите, как оформлены отношения.');
     else if ($$('#childAges input').some((input) => input.value === '' || Number(input.value) < 0 || Number(input.value) > 25)) error = fieldError(['childAges'], 'Укажите возраст каждого ребёнка от 0 до 25 лет.');
   }
-  const validIncome = (prefix) => value(`${prefix}Type`) && /^[A-Za-z]{2}$/.test(value(`${prefix}SourceCountry`)) && /^[A-Za-z]{2}$/.test(value(`${prefix}BankCountry`)) && Number(value(`${prefix}Amount`)) > 0 && value(`${prefix}Evidence`);
+  const validIncome = (prefix) => value(`${prefix}Type`) && parseCountryCode(value(`${prefix}SourceCountry`)) && parseCountryCode(value(`${prefix}BankCountry`)) && Number(value(`${prefix}Amount`)) > 0 && value(`${prefix}Evidence`);
   if (step === 3 && (!validIncome('primary') || (checked('hasAdditionalIncome') && !validIncome('additional')) || (radio('partnerIncluded') === 'YES' && checked('partnerHasIncome') && !validIncome('partner')))) error = fieldError(['primaryType'], 'Заполните тип, страны, сумму, валюту и подтверждение каждого выбранного дохода.');
   if (step === 4 && (!value('longTermGoal') || !value('physicalPresence') || !value('keepRuCitizenship') || (!$('#languageBlock').hidden && !value('languageExamReadiness')))) error = fieldError(['longTermGoal'], 'Заполните долгосрочную цель и связанные с ней условия.');
-  if (step === 5 && ((!checked('budgetUnknown') && Number(value('monthlyBudget')) <= 0) || !value('citySize') || !value('climate') || !radio('petType'))) error = fieldError(['monthlyBudget'], 'Укажите семейный бюджет, город, климат и животных.');
+  if (step === 5 && ((!checked('budgetUnknown') && Number(value('monthlyBudget')) <= 0) || !value('citySize') || checkboxValues('climate').length === 0 || !radio('petType'))) error = fieldError(['monthlyBudget'], 'Укажите семейный бюджет, город, хотя бы один климат и животных.');
   if (step === 6 && !value('specialCircumstance')) error = fieldError(['specialCircumstance'], 'Ответьте на вопрос об особых обстоятельствах.');
   const root = $('#formError');
   root.hidden = !error;
@@ -147,8 +149,10 @@ function routeCard(route, main = false) {
   const incomeTypeBlocked = route.incomeTypeFit === 'DOES_NOT_MEET';
   const requirement = describeIncomeRequirement(route, currency);
   const visibleBlockers = (route.blockers || []).filter((item) => !incomeTypeBlocked || !item.includes('Тип дохода несовместим'));
-  const blockers = visibleBlockers.length ? `<ul>${visibleBlockers.map((item) => `<li>${html(item)}</li>`).join('')}</ul>` : '';
-  return `<article class="route-result ${main ? 'best' : ''}"><div><span class="status-pill ${statusClass(route.routeStatus)}">${html(STATUS_LABELS_RU[route.routeStatus])}</span><h3>${html(route.routeName)}</h3><p>Расчёт выполнен по гражданству РФ.</p></div><p>${html(requirement)}</p>${blockers}</article>`;
+  const reasons = [...(incomeTypeBlocked ? [requirement] : []), ...visibleBlockers];
+  const reasonsBlock = reasons.length ? `<div class="route-reasons"><h4>${reasons.length > 1 ? 'Почему не подходит — несколько независимых причин' : 'Почему не подходит'}</h4><ul>${reasons.map((item) => `<li>${html(item)}</li>`).join('')}</ul></div>` : '';
+  const finance = incomeTypeBlocked ? '' : `<p class="financial-rule">${html(requirement)}</p>`;
+  return `<article class="route-result ${main ? 'best' : ''}"><div><span class="status-pill ${statusClass(route.routeStatus)}">${html(STATUS_LABELS_RU[route.routeStatus])}</span><h3>${html(route.routeName)}</h3><p>Расчёт выполнен для Испании по гражданству РФ.</p></div>${finance}${reasonsBlock}</article>`;
 }
 
 function renderResult(calculation, changed = false) {
@@ -158,8 +162,10 @@ function renderResult(calculation, changed = false) {
   const family = `${calculation.profile.adults} ${calculation.profile.adults === 1 ? 'взрослый' : 'взрослых'}${children ? `, ${children} ${children === 1 ? 'ребёнок' : 'детей'}` : ''}`;
   const followUpHtml = followUps.length ? `<section class="follow-up-card"><h3>Нужно одно уточнение</h3><p>Оно относится только к варианту «${html(followUps[0].routeName)}» и может изменить предварительный статус.</p><label class="field"><span>Как планируете подтвердить участие в системе социального страхования Испании?</span><select id="socialSecurityPlan"><option value="">Не знаю</option><option value="REGISTER_IN_SPAIN">Зарегистрироваться в Испании</option><option value="FOREIGN_COVERAGE_CERTIFICATE">Использовать подтверждение из другой страны</option><option value="SELF_EMPLOYED_SPAIN">Оформиться как самостоятельный работник в Испании</option></select></label><button id="recalculate" class="primary-button" type="button">Уточнить результат</button></section>` : '';
   const { heading: resultHeading, routeLabel } = describeResultIntro(calculation.routes, changed);
-  $('#result').innerHTML = `<div class="result-head"><div><h2>${resultHeading}</h2><p>${routeLabel}: <b>${html(best?.routeName || 'не определён')}</b></p></div><span class="status-pill ${statusClass(best?.routeStatus)}">${html(STATUS_LABELS_RU[best?.routeStatus] || 'Требует проверки')}</span></div>
-    <div class="kpi-grid three"><div class="kpi"><span>Состав семьи</span><b>${html(family)}</b></div><div class="kpi"><span>Подтверждаемый доход после пересчёта</span><b>${best?.incomeEur == null ? 'Не рассчитан' : currency(best.incomeEur, 'EUR')}</b></div><div class="kpi"><span>Необходимый доход</span><b>${best?.thresholdEur == null ? 'Нужен расчёт по документам' : currency(best.thresholdEur, 'EUR')}</b></div></div>
+  const thresholdLabel = best?.incomeTypeFit === 'DOES_NOT_MEET' ? 'Финансовый порог' : 'Необходимый доход';
+  const thresholdValue = best?.incomeTypeFit === 'DOES_NOT_MEET' ? 'Не оценивается: тип дохода не подходит' : best?.thresholdEur == null ? 'Нужен расчёт по документам' : currency(best.thresholdEur, 'EUR');
+  $('#result').innerHTML = `<div class="country-result-banner" data-country-id="ES"><span class="country-flag" aria-hidden="true">🇪🇸</span><div><small>Страна расчёта</small><h2>Испания</h2><p>Все показанные ниже варианты относятся только к Испании.</p></div></div><div class="result-head"><div><h2>${resultHeading}</h2><p>${routeLabel}: <b>${html(best?.routeName || 'не определён')}</b></p></div><span class="status-pill ${statusClass(best?.routeStatus)}">${html(STATUS_LABELS_RU[best?.routeStatus] || 'Требует проверки')}</span></div>
+    <div class="kpi-grid three"><div class="kpi"><span>Состав семьи</span><b>${html(family)}</b></div><div class="kpi"><span>Подтверждаемый доход после пересчёта</span><b>${best?.incomeEur == null ? 'Не рассчитан' : currency(best.incomeEur, 'EUR')}</b></div><div class="kpi"><span>${thresholdLabel}</span><b>${thresholdValue}</b></div></div>
     ${best ? routeCard(best, true) : ''}${followUpHtml}<section><div class="section-title-row"><div><h3>Другие проверенные варианты</h3><p>Каждый вариант проверен отдельно по вашим фактическим ответам.</p></div></div><div class="alternative-routes">${calculation.routes.filter((route) => route.routeId !== best?.routeId).map((route) => routeCard(route)).join('')}</div></section>
     <section><div class="section-title-row"><div><h3>Практический семейный бюджет</h3><p>Обычные расходы семьи; школа учитывается отдельно, только если она нужна.</p></div></div>${calculation.recommendedCity ? `<div class="city-card recommended"><h4>${html(calculation.recommendedCity.cityName)}</h4><strong>${currency(calculation.recommendedCity.costUsd)}/мес</strong></div>` : '<p>Город не определён.</p>'}</section>
     <p class="result-note">Расчёт: ${html(calculation.calculatedAt?.slice(0, 10))}. Курс валют: ${html(calculationContext.fx.as_of?.slice(0, 10))}, источник ${html(calculationContext.fx.source)}. Результат предварительный и не является юридическим обещанием.</p>`;
@@ -196,9 +202,10 @@ function restoreDraft() {
     const stored = JSON.parse(localStorage.getItem(DRAFT_KEY));
     if (stored?.version !== 1 || !stored.answers) return false;
     const a = stored.answers;
-    const simple = ['currentCountry','currentStatus','relationshipType','primaryType','primarySourceCountry','primaryBankCountry','primaryAmount','primaryCurrency','primaryEvidence','additionalType','additionalSourceCountry','additionalBankCountry','additionalAmount','additionalCurrency','additionalEvidence','partnerType','partnerSourceCountry','partnerBankCountry','partnerAmount','partnerCurrency','partnerEvidence','longTermGoal','physicalPresence','languageExamReadiness','keepRuCitizenship','monthlyBudget','budgetCurrency','citySize','climate','dogBreed','otherPetNotes','medicalDetails'];
+    const simple = ['currentCountry','currentStatus','relationshipType','primaryType','primarySourceCountry','primaryBankCountry','primaryAmount','primaryCurrency','primaryEvidence','additionalType','additionalSourceCountry','additionalBankCountry','additionalAmount','additionalCurrency','additionalEvidence','partnerType','partnerSourceCountry','partnerBankCountry','partnerAmount','partnerCurrency','partnerEvidence','longTermGoal','physicalPresence','languageExamReadiness','keepRuCitizenship','monthlyBudget','budgetCurrency','citySize','dogBreed','otherPetNotes','medicalDetails'];
     simple.forEach((id) => { if ($(`#${id}`) && a[id] != null) $(`#${id}`).value = a[id]; });
     setCheckboxes('applicationMethod', a.applicationMethods || (a.applicationMethod ? [a.applicationMethod] : [])); setRadio('hasPartner', (a.hasPartner ?? a.partnerIncluded) ? 'YES' : 'NO'); setRadio('partnerIncluded', a.partnerIncluded ? 'YES' : 'NO'); setRadio('petType', a.petTypes?.[0]);
+    setCheckboxes('climate', a.climates || (a.climate ? [a.climate] : []));
     ['lgbtEnabled','schoolNeeded','hasAdditionalIncome','partnerHasIncome','budgetUnknown','medicalEnabled','specificMedicineRequired','regularCareRequired'].forEach((id) => { if ($(`#${id}`)) $(`#${id}`).checked = Boolean(a[id]); });
     $('#childrenCount').value = String(a.childAges?.length ?? ''); syncChildren(); $$('#childAges input').forEach((input, index) => { input.value = a.childAges[index] ?? ''; });
     $('#specialCircumstance').value = a.specialCircumstances?.[0] || '';
@@ -218,6 +225,11 @@ $$('input[name="applicationMethod"]').forEach((input) => input.addEventListener(
   const methods = $$('input[name="applicationMethod"]');
   if (input.value === 'ANY' && input.checked) methods.forEach((item) => { if (item !== input) item.checked = false; });
   else if (input.checked) methods.find((item) => item.value === 'ANY').checked = false;
+}));
+$$('input[name="climate"]').forEach((input) => input.addEventListener('change', () => {
+  const climates = $$('input[name="climate"]');
+  if (input.value === 'ANY' && input.checked) climates.forEach((item) => { if (item !== input) item.checked = false; });
+  else if (input.checked) climates.find((item) => item.value === 'ANY').checked = false;
 }));
 form.addEventListener('change', () => { syncConditional(); renderProfileSummary(profile()); });
 form.addEventListener('input', () => renderProfileSummary(profile()));
