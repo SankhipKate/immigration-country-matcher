@@ -75,7 +75,7 @@
   {
     "schema_version": "user-profile-v1",
     "profile_id": "TP_U02",
-    "citizenships": ["RU", "AR"],
+    "citizenships": ["RU"],
     "residence": {
       "current_country": "RU",
       "current_status": "CITIZENSHIP"

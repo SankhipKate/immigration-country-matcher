@@ -29,10 +29,10 @@
     "citizenships": {
       "type": "array",
       "minItems": 1,
+      "maxItems": 1,
       "uniqueItems": true,
-      "contains": { "const": "RU" },
-      "items": { "$ref": "#/$defs/countryCode" },
-      "description": "Гражданства пользователя. Для MVP обязательно содержит RU; второе гражданство оценивается отдельно по каждому варианту легализации."
+      "items": { "const": "RU" },
+      "description": "Гражданство пользователя. Текущая версия продукта предназначена только для граждан РФ и не учитывает другие гражданства."
     },
     "residence": {
       "type": "object",

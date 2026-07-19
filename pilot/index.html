@@ -29,7 +29,25 @@
   </section>
 
   <main class="page-shell">
-    <section id="questionnaireView" class="app-layout" aria-label="Анкета">
+    <section id="citizenshipGate" class="eligibility-gate surface" aria-labelledby="citizenshipGateTitle">
+      <div class="step-heading">
+        <span class="step-number">1</span>
+        <div>
+          <h2 id="citizenshipGateTitle">У вас есть гражданство РФ?</h2>
+          <p>Анкета и результаты на сайте подготовлены только для граждан Российской Федерации.</p>
+        </div>
+      </div>
+      <div class="gate-actions" role="group" aria-label="Наличие гражданства РФ">
+        <button id="confirmRuCitizenship" class="primary-button" type="button">Да, есть</button>
+        <button id="denyRuCitizenship" class="secondary-button" type="button">Нет</button>
+      </div>
+      <div id="citizenshipNotice" class="citizenship-notice" role="status" tabindex="-1" hidden>
+        <h3>Информация на сайте вам не подходит</h3>
+        <p>Вся информация, вопросы анкеты и результаты расчёта предназначены только для граждан РФ. Для других гражданств эти сведения неприменимы.</p>
+      </div>
+    </section>
+
+    <section id="questionnaireView" class="app-layout" aria-label="Анкета" hidden>
       <form id="profile-form" class="surface wizard-card" novalidate>
         <div class="wizard-head">
           <div class="step-label"><b id="stepLabel">Шаг 1 из 6</b></div>

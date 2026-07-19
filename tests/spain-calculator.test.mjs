@@ -184,8 +184,8 @@ test('citizenship desired does not block an available initial residence', () => 
   assert.notEqual(result.bestRoute.routeStatus, 'UNSUITABLE');
 });
 
-test('strict universal profile preserves children and creates citizenship variants', () => {
-  const profile = { ...universalSamples[1], route_specific_answers: { ES_DNV: { social_security_plan: 'REGISTER_IN_SPAIN' } } };
+test('country engine preserves children and can still create citizenship variants', () => {
+  const profile = { ...universalSamples[1], citizenships: ['RU', 'AR'], route_specific_answers: { ES_DNV: { social_security_plan: 'REGISTER_IN_SPAIN' } } };
   const result = calculateSpain(profile, data, currencyContext);
   assert.equal(result.profile.children.length, profile.family.children.length);
   assert.equal(result.routes.every((route) => route.citizenshipVariants.length === 2), true);
