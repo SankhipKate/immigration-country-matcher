@@ -5,7 +5,8 @@ const money = (amount, currency) => amount === '' || amount == null ? null : ({ 
 const incomeSource = (prefix, owner, answers) => ({
   owner,
   type: answers[`${prefix}Type`],
-  source_country: parseCountryCode(answers[`${prefix}SourceCountry`]),
+  source_country: answers[`${prefix}Type`] === 'FREELANCE_OR_SELF_EMPLOYED'
+    ? null : parseCountryCode(answers[`${prefix}SourceCountry`]),
   bank_country: parseCountryCode(answers[`${prefix}BankCountry`]),
   monthly_provable: money(answers[`${prefix}Amount`], answers[`${prefix}Currency`]),
   evidence_level: answers[`${prefix}Evidence`],
@@ -72,7 +73,7 @@ export function buildUserProfile(answers) {
     pets: {
       types: petTypes,
       dogs: petTypes.includes('DOG') ? [{ breed: answers.dogBreed?.trim() || null }] : [],
-      other_pet_notes: petTypes.includes('OTHER') ? answers.otherPetNotes?.trim() || null : null,
+      other_pet_notes: petTypes.includes('CAT') ? answers.otherPetNotes?.trim() || null : null,
     },
     special_circumstances: answers.specialCircumstances?.length ? answers.specialCircumstances : ['NONE'],
     ...(medical ? { optional_modules: { medical } } : {}),
@@ -97,7 +98,8 @@ export function validateUserProfile(profile) {
   const sources = [profile?.income?.primary, ...(profile?.income?.additional_sources || []), ...(profile?.income?.partner?.sources || [])];
   for (const source of sources) {
     if (!source?.type) add('primaryType', 'Укажите тип дохода.');
-    if (!code(source?.source_country)) add('primarySourceCountry', 'Укажите двухбуквенный код страны источника дохода.');
+    if (source?.source_country !== null && !code(source?.source_country)) add('primarySourceCountry', 'Укажите двухбуквенный код страны источника дохода.');
+    if (source?.source_country === null && source?.type !== 'FREELANCE_OR_SELF_EMPLOYED') add('primarySourceCountry', 'Укажите страну источника дохода.');
     if (!code(source?.bank_country)) add('primaryBankCountry', 'Укажите двухбуквенный код страны банка.');
     if (!positiveMoney(source?.monthly_provable) || source.monthly_provable.amount <= 0) add('primaryAmount', 'Укажите положительную подтверждаемую сумму и валюту.');
     if (!source?.evidence_level) add('primaryEvidence', 'Укажите полноту подтверждения дохода.');

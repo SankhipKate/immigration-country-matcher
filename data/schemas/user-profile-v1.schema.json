@@ -412,7 +412,10 @@
             "OTHER_REGULAR_REMOTE_INCOME"
           ]
         },
-        "source_country": { "$ref": "#/$defs/countryCode" },
+        "source_country": {
+          "anyOf": [{ "$ref": "#/$defs/countryCode" }, { "type": "null" }],
+          "description": "Страна источника может быть null для фриланса или самозанятости без единого иностранного заказчика."
+        },
         "bank_country": { "$ref": "#/$defs/countryCode" },
         "monthly_provable": { "$ref": "#/$defs/money" },
         "evidence_level": { "enum": ["FULL", "PARTIAL", "NONE"] },
