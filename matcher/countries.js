@@ -5,9 +5,25 @@ const namesEn = new Intl.DisplayNames(['en'], { type: 'region' });
 const records = ISO_CODES.map((code) => ({ code, name: namesRu.of(code) || code, nameEn: namesEn.of(code) || code }));
 const normalized = (value) => String(value || '').trim().toLocaleLowerCase('ru-RU');
 const byName = new Map(records.flatMap((record) => [[normalized(record.name), record.code], [normalized(record.nameEn), record.code]]));
+const searchPriority = new Map([['PH', 1]]);
 
 export function countryOptions() {
   return records.map(({ code, name, nameEn }) => ({ code, name, nameEn, label: `${name} / ${nameEn} — ${code}` }));
+}
+
+export function searchCountries(query, limit = 8) {
+  const needle = normalized(query);
+  if (!needle) return [];
+  return countryOptions().map((record) => {
+    const values = [normalized(record.name), normalized(record.nameEn), normalized(record.code)];
+    const score = values.some((value) => value === needle) ? 0
+      : values.some((value) => value.startsWith(needle)) ? 1
+        : values.some((value) => value.includes(needle)) ? 2 : 99;
+    return { ...record, score };
+  }).filter(({ score }) => score < 99)
+    .sort((left, right) => left.score - right.score || (searchPriority.get(right.code) || 0) - (searchPriority.get(left.code) || 0) || left.name.localeCompare(right.name, 'ru'))
+    .slice(0, limit)
+    .map(({ score, ...record }) => record);
 }
 
 export function parseCountryCode(value) {

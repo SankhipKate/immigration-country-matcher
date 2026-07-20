@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { buildUserProfile, collectEligibleFollowUps, describeIncomeRequirement, describeResultIntro, validateAgainstSchema, validateUserProfile } from '../matcher/profile.js';
+import { buildUserProfile, describeIncomeRequirement, describeResultIntro, validateAgainstSchema, validateUserProfile } from '../matcher/profile.js';
 import { calculateSpain } from '../js/spain-calculator.js';
-import { countryOptions, parseCountryCode } from '../matcher/countries.js';
+import { countryOptions, parseCountryCode, searchCountries } from '../matcher/countries.js';
 
 const profileSchema = JSON.parse(await readFile(new URL('../data/schemas/user-profile-v1.schema.json', import.meta.url), 'utf8'));
 const spainData = JSON.parse(await readFile(new URL('../data/spain-research-v2.2.json', import.meta.url), 'utf8'));
@@ -69,6 +69,11 @@ test('searchable country values are converted to ISO codes', () => {
   assert.match(countryOptions().find((country) => country.code === 'PH').label, /^Филиппины \/ Philippines — PH$/);
 });
 
+test('Russian prefix search ranks Philippines before Ethiopia', () => {
+  assert.equal(searchCountries('фи')[0].code, 'PH');
+  assert.equal(searchCountries('ph')[0].code, 'PH');
+});
+
 test('freelance income does not invent a source country', () => {
   const profile = buildUserProfile(answers({ primaryType: 'FREELANCE_OR_SELF_EMPLOYED', primarySourceCountry: '' }));
   assert.equal(profile.income.primary.source_country, null);
@@ -113,18 +118,11 @@ test('route-specific follow-up answer is preserved outside the main questions', 
   assert.deepEqual(buildUserProfile(answers({ routeSpecificAnswers })).route_specific_answers, routeSpecificAnswers);
 });
 
-test('DNV follow-up appears after the first matcher calculation and disappears after the answer', () => {
-  const initialProfile = buildUserProfile(answers());
-  const initial = calculateSpain(initialProfile, spainData, context);
-  assert.ok(initial.routes.flatMap((route) => route.followUpQuestions).some((question) => question.code === 'ES_DNV_SOCIAL_SECURITY_PLAN'));
-  const answeredProfile = buildUserProfile(answers({ routeSpecificAnswers: { ES_DNV: { social_security_plan: 'REGISTER_IN_SPAIN' } } }));
-  const answered = calculateSpain(answeredProfile, spainData, context);
-  assert.equal(answered.routes.flatMap((route) => route.followUpQuestions).some((question) => question.code === 'ES_DNV_SOCIAL_SECURITY_PLAN'), false);
-});
-
-test('follow-up is not shown for an unsuitable route', () => {
-  const followUps = collectEligibleFollowUps({ routes: [{ routeStatus: 'UNSUITABLE', routeName: 'DNV', followUpQuestions: [{ code: 'ES_DNV_SOCIAL_SECURITY_PLAN' }] }] });
-  assert.deepEqual(followUps, []);
+test('DNV social security is a route condition, not a follow-up question', () => {
+  const result = calculateSpain(buildUserProfile(answers()), spainData, context);
+  const dnv = result.routes.find((route) => route.routeId === 'ES_DNV');
+  assert.deepEqual(dnv.followUpQuestions, []);
+  assert.ok(dnv.conditions.some((condition) => condition.includes('социальн')));
 });
 
 test('income-type mismatch explicitly says that the amount is not the problem', () => {
