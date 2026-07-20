@@ -4,6 +4,12 @@
 .segmented.four{grid-template-columns:repeat(4,1fr)}
 .segmented.climate-options{grid-template-columns:repeat(5,1fr)}
 .compact-field{max-width:420px;margin:18px 0}
+.choice-group+.application-location{margin-top:28px}
+.field-help{margin:10px 0 0;color:var(--muted);font-size:15px;line-height:1.55}
+.info-box{margin:0 0 24px;padding:16px 18px;border-left:4px solid var(--blue-600);border-radius:10px;background:#f3f8fd;color:#334a62}
+.info-box p{margin:6px 0 0;line-height:1.55}
+.standalone-toggle{margin:20px 0}
+.field small{display:block;margin-top:7px;color:var(--muted);font-size:14px;line-height:1.45}
 .income-block{margin-bottom:16px;padding:18px;border:1px solid var(--line);border-radius:16px;background:#f9fbfd}
 .income-block h3,.conditional-card h3{margin:0 0 14px;font-size:17px}
 .money-combo{display:grid;grid-template-columns:1fr 92px;border:1px solid var(--line-strong);border-radius:12px;overflow:hidden;background:#fff}

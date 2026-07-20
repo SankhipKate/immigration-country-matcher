@@ -267,8 +267,8 @@ function goalChecks(route, indexes, profile) {
   }
   const presenceField = citizenshipGoal ? 'allowed_absence_for_citizenship_days' : 'allowed_absence_for_pr_days';
   if (['LESS_THAN_6_MONTHS', 'DEPENDS_ON_COUNTRY'].includes(profile.physicalPresence)) {
-    if (rule[presenceField] == null) checks.push(outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'absence_rule_missing', 'Точные допустимые отсутствия для долгосрочной цели не исследованы.'));
-    else if (profile.physicalPresence === 'DEPENDS_ON_COUNTRY') checks.push(outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'presence_decision_needed', 'Нужно подтвердить готовность к требуемому физическому присутствию.'));
+    if (profile.physicalPresence === 'DEPENDS_ON_COUNTRY') checks.push(outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'presence_decision_needed', 'После выбора программы нужно подтвердить готовность к требуемому сроку проживания и ограничениям на выезды.'));
+    else if (rule[presenceField] == null) checks.push(outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'absence_rule_missing', 'Точные допустимые отсутствия для долгосрочной цели не исследованы.'));
   }
   if (citizenshipGoal && ['REQUIRED', 'DESIRABLE'].includes(profile.keepRuCitizenship)) {
     if (rule.multiple_citizenship_allowed === 'NO' && profile.keepRuCitizenship === 'REQUIRED') checks.push(outcome(ROUTE_STATUSES.UNSUITABLE, 'renunciation_conflict', 'Обязательное сохранение гражданства РФ конфликтует с подтверждённым правилом.'));
