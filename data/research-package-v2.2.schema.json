@@ -765,6 +765,8 @@
             "ORIGIN_REPATRIATION",
             "TALENT",
             "INTERNATIONAL_PROTECTION",
+            "PERMANENT_RESIDENCE",
+            "TEMPORARY_RESIDENCE",
             "OTHER_NATIONAL"
           ]
         },
