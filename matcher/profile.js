@@ -45,10 +45,10 @@ export function buildUserProfile(answers) {
       school_needed: children.length > 0 && Boolean(answers.schoolNeeded),
     },
     lgbt: {
-      enabled: partnerIncluded && Boolean(answers.lgbtEnabled),
-      consent_for_personalization: partnerIncluded && Boolean(answers.lgbtEnabled),
+      enabled: Boolean(answers.lgbtEnabled),
+      consent_for_personalization: Boolean(answers.lgbtEnabled),
       family_recognition_relevant: partnerIncluded && answers.lgbtEnabled ? true : null,
-      safety_relevant: partnerIncluded && answers.lgbtEnabled ? true : null,
+      safety_relevant: answers.lgbtEnabled ? true : null,
     },
     income: {
       primary: incomeSource('primary', 'APPLICANT', answers),
@@ -182,7 +182,19 @@ export function collectEligibleFollowUps(calculation) {
 }
 
 export function describeIncomeRequirement(route, formatCurrency) {
-  if (route?.incomeTypeFit === 'DOES_NOT_MEET') return 'Ваш тип дохода не принимается для этого варианта. Сумма дохода не является причиной этого вывода.';
+  if (route?.incomeTypeFit === 'DOES_NOT_MEET') {
+    const acceptedByRoute = {
+      ES_DNV: 'Подойдут удалённая работа по трудовому договору, договоры с иностранными заказчиками или доход владельца иностранной компании.',
+      ES_NLV: 'Нужен пассивный доход, который не требует работы: например, аренда, дивиденды или пенсия.',
+      ES_SELF_EMPLOYED: 'Нужен план самостоятельной деятельности или бизнеса в Испании.',
+      ES_ENTREPRENEUR: 'Нужен инновационный предпринимательский проект, проходящий индивидуальную оценку.',
+      ES_HIGHLY_QUALIFIED: 'Нужно предложение квалифицированной работы от работодателя в Испании.',
+      ES_STUDENT: 'Нужно основание для обучения и средства на проживание; текущий рабочий доход сам по себе не создаёт студенческий маршрут.',
+      UY_DIGITAL_NOMAD: 'Подойдут удалённая работа по найму, договоры с иностранными заказчиками или доход владельца иностранной компании.',
+    };
+    const change = acceptedByRoute[route.routeId] || 'Для этого маршрута требуется другой юридически допустимый источник средств.';
+    return `Ваш текущий тип дохода не принимается для этого варианта. ${change} Сумма дохода не является причиной отказа.`;
+  }
   if (route?.thresholdEur == null) return 'Финансовое требование для этого варианта не выражено единым порогом и проверяется по документам.';
   return `Минимальный подтверждаемый доход: ${formatCurrency(route.thresholdEur, 'EUR')} в месяц.`;
 }
@@ -190,7 +202,7 @@ export function describeIncomeRequirement(route, formatCurrency) {
 export function describeResultIntro(routes, changed = false) {
   const allUnsuitable = routes?.length > 0 && routes.every((route) => route.routeStatus === 'UNSUITABLE');
   return {
-    heading: changed ? 'Результат обновлён после уточнения' : allUnsuitable ? 'Сейчас подходящих вариантов не найдено' : 'Предварительный результат по Испании',
+    heading: changed ? 'Результат обновлён после уточнения' : allUnsuitable ? 'Сейчас подходящих вариантов не найдено' : 'Предварительный результат',
     routeLabel: allUnsuitable ? 'Наиболее близкий вариант при изменении условий' : 'Лучший доступный вариант',
   };
 }

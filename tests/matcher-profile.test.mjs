@@ -41,9 +41,12 @@ test('registered and unregistered partnerships are preserved', () => {
   }
 });
 
-test('same-sex personalization requires an included partner and explicit choice', () => {
+test('LGBT safety personalization remains available without an included partner', () => {
   assert.equal(buildUserProfile(answers({ hasPartner: true, partnerIncluded: true, relationshipType: 'MARRIAGE', lgbtEnabled: true })).lgbt.consent_for_personalization, true);
-  assert.equal(buildUserProfile(answers({ partnerIncluded: false, lgbtEnabled: true })).lgbt.enabled, false);
+  const solo = buildUserProfile(answers({ partnerIncluded: false, lgbtEnabled: true }));
+  assert.equal(solo.lgbt.enabled, true);
+  assert.equal(solo.lgbt.safety_relevant, true);
+  assert.equal(solo.lgbt.family_recognition_relevant, null);
 });
 
 test('tourist status is not converted to residence', () => {
