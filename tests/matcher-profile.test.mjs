@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { buildUserProfile, collectEligibleFollowUps, describeIncomeRequirement, describeResultIntro, validateAgainstSchema, validateUserProfile } from '../matcher/profile.js';
 import { calculateSpain } from '../js/spain-calculator.js';
-import { parseCountryCode } from '../matcher/countries.js';
+import { countryOptions, parseCountryCode } from '../matcher/countries.js';
 
 const profileSchema = JSON.parse(await readFile(new URL('../data/schemas/user-profile-v1.schema.json', import.meta.url), 'utf8'));
 const spainData = JSON.parse(await readFile(new URL('../data/spain-research-v2.2.json', import.meta.url), 'utf8'));
@@ -57,6 +57,15 @@ test('searchable country values are converted to ISO codes', () => {
   assert.equal(parseCountryCode('PH — Филиппины'), 'PH');
   assert.equal(parseCountryCode('Филиппины'), 'PH');
   assert.equal(parseCountryCode('RU'), 'RU');
+  assert.equal(parseCountryCode('Филиппины / Philippines — PH'), 'PH');
+  assert.match(countryOptions().find((country) => country.code === 'PH').label, /^Филиппины \/ Philippines — PH$/);
+});
+
+test('freelance income does not invent a source country', () => {
+  const profile = buildUserProfile(answers({ primaryType: 'FREELANCE_OR_SELF_EMPLOYED', primarySourceCountry: '' }));
+  assert.equal(profile.income.primary.source_country, null);
+  assert.equal(validateUserProfile(profile).valid, true);
+  assert.deepEqual(validateAgainstSchema(profile, profileSchema), []);
 });
 
 test('user can select current-country and in-country application methods together', () => {
