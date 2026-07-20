@@ -13,6 +13,7 @@
 .inline-field-error{margin:9px 0 0;color:var(--red-600);font:700 14px/1.4 Arial,"Helvetica Neue",sans-serif}
 .has-field-error input,.has-field-error select,.has-field-error .segmented{border-color:var(--red-600)!important}
 .practical-warning p{margin:0;color:#5d461a}
+.version-footer{margin:28px 0 8px;text-align:center;color:var(--muted);font:600 13px/1.4 Arial,"Helvetica Neue",sans-serif;letter-spacing:.02em}
 .income-block{margin-bottom:16px;padding:18px;border:1px solid var(--line);border-radius:16px;background:#f9fbfd}
 .income-block h3,.conditional-card h3{margin:0 0 14px;font-size:17px}
 .money-combo{display:grid;grid-template-columns:1fr 92px;border:1px solid var(--line-strong);border-radius:12px;overflow:hidden;background:#fff}
