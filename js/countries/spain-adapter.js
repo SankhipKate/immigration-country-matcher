@@ -23,8 +23,8 @@ function normalizeProfile(profile = {}, context) {
     monthlyIncomeUsd: incomeConversion?.convertedAmount ?? null,
     incomeMoney: primaryIncome.monthly_provable ?? null,
     incomeConversion,
+    incomeSourceCountry: primaryIncome.source_country ?? null,
     bankCountry: primaryIncome.bank_country ?? null,
-    socialSecurityPlan: profile.route_specific_answers?.ES_DNV?.social_security_plan ?? null,
     adults: family.adults_count ?? null,
     children: Array.isArray(family.children) ? family.children.map((child) => ({ ...child })) : null,
     partnerIncluded: family.partner_included ?? null,
@@ -67,7 +67,7 @@ export function legacyPilotProfileToUniversal(profile = {}) {
     application_preferences: { methods: profile.currentLocation === 'SPAIN' ? ['IN_COUNTRY_AFTER_ENTRY'] : profile.currentLocation === 'RUSSIA' ? ['RUSSIA'] : ['CURRENT_COUNTRY'] },
     family: { adults_count: profile.adults ?? null, partner_included: Number(profile.adults) > 1 && Boolean(profile.needsFamilyVisa), relationship_type: Number(profile.adults) > 1 ? profile.relationshipType ?? null : null, children: Array.from({ length: childCount }, () => ({ age_years: null })), school_needed: Boolean(profile.schoolNeeded) },
     lgbt: { enabled: Boolean(profile.sameSexFamily), consent_for_personalization: Boolean(profile.sameSexFamily), family_recognition_relevant: Boolean(profile.sameSexFamily) },
-    income: { primary: { type: scenarioTypes[profile.plannedBasis] ?? null, bank_country: profile.bankCountry ?? null, monthly_provable: profile.monthlyIncomeUsd == null ? null : { amount: Number(profile.monthlyIncomeUsd), currency: 'USD' } } },
+    income: { primary: { type: scenarioTypes[profile.plannedBasis] ?? null, source_country: profile.incomeSourceCountry ?? null, bank_country: profile.bankCountry ?? null, monthly_provable: profile.monthlyIncomeUsd == null ? null : { amount: Number(profile.monthlyIncomeUsd), currency: 'USD' } } },
     goal: { long_term: longTerm, physical_presence: presence, language_exam_readiness: language ?? null, keep_russian_citizenship: profile.keepRuCitizenship ?? null },
     preferences: { monthly_budget: profile.monthlyBudgetUsd == null ? null : { amount: Number(profile.monthlyBudgetUsd), currency: 'USD' }, city_size: profile.citySize ?? null },
     pets: { types: [profile.pet || 'NONE'] }, special_circumstances: ['NONE'], optional_modules: { medical: { specific_medicine_required: Boolean(profile.medicineRequired) } },
@@ -175,6 +175,13 @@ function incomeEvaluation(route, indexes, profile, context) {
   const incomeEur = requirementConversion?.convertedAmount ?? null;
   const base = { incomeEur, requirementConversion };
   if (!profile.plannedBasis) return { ...base, checks: [outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'income_type_missing', 'Нужно указать основной тип дохода.', { field: 'income.primary.type' })], thresholdEur: null, incomeTypeFit: 'UNKNOWN', incomeFit: 'UNKNOWN' };
+  if (rule.separateBasis) {
+    const basisSelected = rule.scenarios.includes(profile.plannedBasis);
+    if (!basisSelected) return { ...base, checks: [outcome(ROUTE_STATUSES.UNSUITABLE, 'separate_route_basis_required', `${rule.separateBasis} Это отдельное требование маршрута, а не тип вашего текущего дохода.`)], thresholdEur: null, incomeTypeFit: 'NOT_APPLICABLE', incomeFit: 'NOT_APPLICABLE' };
+    const checks = [outcome(rule.individualReview ? ROUTE_STATUSES.INDIVIDUAL_REVIEW_REQUIRED : ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'separate_route_basis_review', rule.separateBasis)];
+    if (rule.missingSalaryThreshold) checks.splice(0, checks.length, outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'hq_salary_missing', 'Зарплатный порог проверяется после получения конкретного предложения работы.'));
+    return { ...base, checks, thresholdEur: null, incomeTypeFit: 'NOT_APPLICABLE', incomeFit: 'NOT_APPLICABLE' };
+  }
   if (!rule.incomeTypes.includes(incomeType)) return { ...base, checks: [outcome(ROUTE_STATUSES.UNSUITABLE, 'income_type_incompatible', 'Тип дохода несовместим с правилами этого маршрута.')], thresholdEur: null, incomeTypeFit: 'DOES_NOT_MEET', incomeFit: 'NOT_APPLICABLE' };
   if (rule.individualReview) {
     const message = route.country_id === 'UY'
@@ -188,7 +195,7 @@ function incomeEvaluation(route, indexes, profile, context) {
       : [outcome(ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS, 'means_declaration_required', 'Официальный фиксированный минимум не установлен; потребуется декларация о достаточных средствах.', { condition: 'Подать подписанную декларацию о наличии средств для проживания.' })];
     return { ...base, checks, thresholdEur: null, incomeTypeFit: 'MEETS', incomeFit: profile.monthlyIncomeUsd == null ? 'UNKNOWN' : 'MEETS' };
   }
-  if (rule.missingSalaryThreshold) return { ...base, checks: [outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'hq_salary_missing', 'Официальный зарплатный порог 2026 ещё не внесён.')], thresholdEur: null, incomeTypeFit: 'MEETS', incomeFit: 'UNKNOWN' };
+  if (rule.missingSalaryThreshold) return { ...base, checks: [outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'hq_salary_missing', 'Зарплатный порог проверяется после получения конкретного предложения работы.')], thresholdEur: null, incomeTypeFit: 'NOT_APPLICABLE', incomeFit: 'UNKNOWN' };
   const incomeRule = indexes.routeIncome.get(`${route.route_id}:${incomeType}`);
   if (!incomeRule) return { ...base, checks: [outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'income_rule_missing', 'Подтверждённое правило дохода отсутствует.')], thresholdEur: null, incomeTypeFit: 'MEETS', incomeFit: 'UNKNOWN' };
   const thresholdEur = familyThreshold(incomeRule, profile);
@@ -198,11 +205,14 @@ function incomeEvaluation(route, indexes, profile, context) {
   else if (incomeEur < thresholdEur * 1.1) checks.push(outcome(ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS, 'income_close_to_threshold', 'Доход превышает порог менее чем на 10%.', { condition: 'Поддерживать доход минимум на 10% выше порога.' }));
   else checks.push(outcome(ROUTE_STATUSES.SUITABLE, 'income_meets_threshold', 'Доход превышает семейный порог.'));
   if (rule.socialSecurityReview) {
+    if (profile.incomeSourceCountry === 'ES') checks.push(outcome(ROUTE_STATUSES.UNSUITABLE, 'dnv_foreign_income_source_required', 'Для DNV основная работа или профессиональная деятельность должна быть связана преимущественно с работодателем или заказчиками за пределами Испании.'));
+    else checks.push(outcome(ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS, 'dnv_foreign_income_source', 'Для DNV потребуется подтвердить иностранного работодателя или заказчиков и допустимую долю деятельности в Испании.', { condition: 'Подтвердить иностранного работодателя или заказчиков и допустимую долю деятельности в Испании.' }));
     if (profile.bankCountry === 'RU') checks.push(outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'russian_bank_documents_open', 'Приём выписок российского банка требует подтверждения.'));
-    if (!profile.socialSecurityPlan) checks.push(outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'social_security_answer_missing', 'Уточните способ подтверждения социального страхования.', { field: 'route_specific_answers.ES_DNV.social_security_plan' }));
-    else if (profile.socialSecurityPlan === 'FOREIGN_CERTIFICATE' && profile.applicationNationality === 'RU') checks.push(outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'foreign_certificate_rule_missing', 'Применимость иностранного сертификата для российского кейса не подтверждена.'));
-    else if (profile.socialSecurityPlan === 'UNKNOWN') checks.push(outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'social_security_decision_needed', 'Нужно выбрать способ подтверждения социального страхования.'));
-    else if (profile.socialSecurityPlan === 'REGISTER_IN_SPAIN') checks.push(outcome(ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS, 'register_social_security', 'Потребуется регистрация в системе социального страхования Испании.', { condition: 'Зарегистрироваться в системе социального страхования Испании.' }));
+    const contractor = ['CONTRACTOR', 'FREELANCE_OR_SELF_EMPLOYED'].includes(profile.plannedBasis);
+    const message = contractor
+      ? 'Для DNV самостоятельному специалисту потребуется регистрация в испанской системе социального страхования (RETA).'
+      : 'Для DNV потребуется испанское социальное страхование либо допустимое подтверждение покрытия по международному соглашению.';
+    checks.push(outcome(ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS, 'social_security_required', message, { condition: message }));
   }
   return { ...base, checks, thresholdEur, incomeTypeFit: 'MEETS', incomeFit: profile.monthlyIncomeUsd == null ? 'UNKNOWN' : incomeEur >= thresholdEur ? 'MEETS' : 'DOES_NOT_MEET' };
 }
@@ -261,14 +271,12 @@ function goalChecks(route, indexes, profile) {
   else if (rule[field] === 'NO') checks.push(outcome(ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS, 'long_term_preference_unavailable', `Желаемый путь к ${label} не подтверждён, но первоначальный ВНЖ доступен.`, { condition: 'Учесть отсутствие подтверждённого долгосрочного пути.' }));
   else checks.push(outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'long_term_path_unknown', `Данные о пути к ${label} отсутствуют.`));
   if (citizenshipGoal && rule.language_exam_required === 'YES') {
-    if (profile.languageReadiness === 'DEPENDS_ON_LANGUAGE') checks.push(outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'language_decision_needed', 'Готовность к языковому экзамену зависит от требуемого языка.'));
-    else if (profile.languageReadiness === 'NO' && profile.goal === 'CITIZENSHIP_REQUIRED') checks.push(outcome(ROUTE_STATUSES.UNSUITABLE, 'language_required', 'Для обязательной цели требуется языковой экзамен.'));
+    if (profile.languageReadiness === 'NO' && profile.goal === 'CITIZENSHIP_REQUIRED') checks.push(outcome(ROUTE_STATUSES.UNSUITABLE, 'language_required', 'Для обязательной цели требуется языковой экзамен.'));
     else if (profile.languageReadiness === 'BASIC_ONLY' && !['A1', 'A2'].includes(rule.required_language_level)) checks.push(outcome(ROUTE_STATUSES.UNSUITABLE, 'language_level_insufficient', 'Базового уровня недостаточно для подтверждённого экзамена.'));
   }
   const presenceField = citizenshipGoal ? 'allowed_absence_for_citizenship_days' : 'allowed_absence_for_pr_days';
-  if (['LESS_THAN_6_MONTHS', 'DEPENDS_ON_COUNTRY'].includes(profile.physicalPresence)) {
-    if (profile.physicalPresence === 'DEPENDS_ON_COUNTRY') checks.push(outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'presence_decision_needed', 'После выбора программы нужно подтвердить готовность к требуемому сроку проживания и ограничениям на выезды.'));
-    else if (rule[presenceField] == null) checks.push(outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'absence_rule_missing', 'Точные допустимые отсутствия для долгосрочной цели не исследованы.'));
+  if (profile.physicalPresence === 'LESS_THAN_6_MONTHS' && rule[presenceField] == null) {
+    checks.push(outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'absence_rule_missing', 'Точные допустимые отсутствия для долгосрочной цели не исследованы.'));
   }
   if (citizenshipGoal && ['REQUIRED', 'DESIRABLE'].includes(profile.keepRuCitizenship)) {
     if (rule.multiple_citizenship_allowed === 'NO' && profile.keepRuCitizenship === 'REQUIRED') checks.push(outcome(ROUTE_STATUSES.UNSUITABLE, 'renunciation_conflict', 'Обязательное сохранение гражданства РФ конфликтует с подтверждённым правилом.'));
@@ -296,9 +304,9 @@ function evaluateRoute(route, indexes, profile, context) {
     incomeOriginal: profile.incomeMoney, incomeConversion: profile.incomeConversion, incomeRequirementConversion: income.requirementConversion,
     goalFit: fits(goal), applicationFit: fits(application), familyFit: fits(family), incomeTypeFit: income.incomeTypeFit, incomeFit: income.incomeFit,
     countryMissingCount: missing.length, clientMissingCount: preliminary.length, conditionsCount: conditions.length,
-    scenarioAffinity: ROUTE_RULES[route.route_id]?.scenarios.includes(profile.plannedBasis) ? 1 : 0,
+    scenarioAffinity: ROUTE_RULES[route.route_id]?.scenarios?.includes(profile.plannedBasis) ? 1 : 0,
     checks, conditions, blockers: messages(ROUTE_STATUSES.UNSUITABLE), missing, countryMissing: missing, preliminary, clientMissing: preliminary, review,
-    followUpQuestions: checks.filter((check) => check.code === 'social_security_answer_missing').map(() => ({ code: 'ES_DNV_SOCIAL_SECURITY_PLAN', field: 'route_specific_answers.ES_DNV.social_security_plan', question: 'Как вы планируете подтвердить социальное страхование для DNV?' })),
+    followUpQuestions: [],
     primarySourceId: route.primary_source_id, longTerm: indexes.routeStatus.get(route.route_id) || null,
     work: indexes.routeWork.get(route.route_id) || null, family: indexes.routeFamily.get(route.route_id) || null,
   };

@@ -86,6 +86,13 @@ test('Russian bank statements return insufficient country data for DNV', () => {
   assert.equal(result.bestRoute.routeStatus, 'INSUFFICIENT_COUNTRY_DATA');
 });
 
+test('Spanish primary income source is evaluated separately for DNV', () => {
+  const result = calculate({ plannedBasis: 'REMOTE_EMPLOYEE', monthlyIncomeUsd: 5000, incomeSourceCountry: 'ES' });
+  const dnv = result.routes.find((route) => route.routeId === 'ES_DNV');
+  assert.equal(dnv.routeStatus, 'UNSUITABLE');
+  assert.ok(dnv.blockers.some((message) => message.includes('за пределами Испании')));
+});
+
 test('passive-income profile selects NLV when its threshold is met', () => {
   const result = calculate({ plannedBasis: 'PASSIVE_INCOME', monthlyIncomeUsd: 3200 });
   assert.equal(result.bestRoute.routeId, 'ES_NLV');
@@ -153,15 +160,17 @@ test('canonical conflict and selection orders remain independent', () => {
   assert.equal(selectBestVariant([{ routeId: 'review', routeStatus: 'INDIVIDUAL_REVIEW_REQUIRED' }, { routeId: 'missing', routeStatus: 'INSUFFICIENT_COUNTRY_DATA' }]).routeId, 'missing');
 });
 
-test('missing DNV social-security answer creates a follow-up question', () => {
+test('DNV social security is reported as a mandatory condition without a follow-up', () => {
   const result = calculate({ plannedBasis: 'REMOTE_EMPLOYEE', monthlyIncomeUsd: 5000, socialSecurityPlan: null });
-  assert.equal(result.bestRoute.routeStatus, 'PRELIMINARY_SUITABLE');
-  assert.equal(result.bestRoute.followUpQuestions[0].code, 'ES_DNV_SOCIAL_SECURITY_PLAN');
+  assert.equal(result.bestRoute.routeStatus, 'SUITABLE_WITH_CONDITIONS');
+  assert.deepEqual(result.bestRoute.followUpQuestions, []);
+  assert.ok(result.bestRoute.conditions.some((condition) => condition.includes('социальн')));
 });
 
-test('foreign certificate for RU remains an explicit country-data gap', () => {
+test('legacy social-security answer does not override the route requirement', () => {
   const result = calculate({ plannedBasis: 'REMOTE_EMPLOYEE', monthlyIncomeUsd: 5000, socialSecurityPlan: 'FOREIGN_CERTIFICATE' });
-  assert.equal(result.bestRoute.routeStatus, 'INSUFFICIENT_COUNTRY_DATA');
+  assert.equal(result.bestRoute.routeStatus, 'SUITABLE_WITH_CONDITIONS');
+  assert.deepEqual(result.bestRoute.followUpQuestions, []);
 });
 
 test('unknown budget is not converted to zero', () => {

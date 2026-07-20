@@ -4,7 +4,7 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Универсальная анкета Immigration Matcher для граждан РФ"><meta name="theme-color" content="#071e3d">
   <title>Анкета — Immigration Matcher</title>
-  <link rel="stylesheet" href="../pilot/styles.css?v=20260720-1"><link rel="stylesheet" href="./styles.css?v=20260720-1">
+  <link rel="stylesheet" href="../pilot/styles.css?v=20260720-1"><link rel="stylesheet" href="./styles.css?v=20260720-3">
 </head>
 <body>
   <header class="site-header"><div class="nav-shell"><a class="brand" href="../" aria-label="Immigration Matcher — главная"><span class="brand-mark" aria-hidden="true"><span></span></span><span>Immigration <em>Matcher</em></span></a><a class="catalog-link" href="../">Каталог стран</a><div class="secure-note"><span aria-hidden="true">◇</span> Данные остаются в браузере</div></div></header>
@@ -18,7 +18,7 @@
         <div id="formError" class="form-error" role="alert" hidden></div>
 
         <section class="wizard-step is-active" data-step="1">
-          <div class="step-heading"><span class="step-number">1</span><div><h2>Где вы сейчас</h2><p>Это нужно для проверки допустимого места подачи и требования иметь легальный статус в стране подачи.</p></div></div>
+          <div class="step-heading"><span class="step-number">1</span><div><h2>Где вы сейчас</h2><p>Это нужно для проверки допустимого места подачи.</p></div></div>
           <div class="info-box"><b>Что именно проверяет расчёт?</b><p>Движок применяет правила маршрута: можно ли податься из России, из страны проживания или после въезда. Он не проверяет в реальном времени конкретные консульства и наличие записи.</p></div>
           <fieldset class="choice-group"><legend>Вы сейчас находитесь в России?</legend><div class="segmented"><label><input type="radio" name="inRussia" value="YES"><span>Да</span></label><label><input type="radio" name="inRussia" value="NO"><span>Нет</span></label></div></fieldset>
           <div id="outsideRussiaBlock" class="conditional-card" hidden>
@@ -42,10 +42,10 @@
 
         <section class="wizard-step" data-step="3" hidden>
           <div class="step-heading"><span class="step-number">3</span><div><h2>Доход и документы</h2><p>Укажите ежемесячную сумму, которую реально можно подтвердить договором, выписками или налоговыми документами.</p></div></div>
-          <div class="info-box"><b>Почему важны тип дохода и банк?</b><p><b>Работа по найму</b> — трудовой договор и работодатель; <b>контракт</b> — услуги заказчику без трудовых отношений. Тип определяет юридически допустимый источник средств, сумма сравнивается с порогом семьи. Страна банка влияет на доступность выписок, переводов и принятие документов, но сама по себе не назначает маршрут.</p></div>
+          <div class="info-box"><b>Почему важны тип дохода, источник и банк?</b><p><b>Работа по найму</b> — трудовой договор с работодателем; <b>контракт с заказчиком</b> — услуги без трудовых отношений. Страна источника показывает, является ли работодатель или заказчик иностранным: это юридическое условие только для отдельных маршрутов удалённой работы. Страна банка нужна для проверки, можно ли принять выписки и проследить поступления; сама по себе она не определяет пригодность маршрута.</p></div>
           <div class="income-block"><h3>Основной доход заявителя</h3><div class="field-grid two-col">
-            <label class="field"><span>Тип дохода</span><select id="primaryType"><option value="">Не выбрано</option><option value="REMOTE_EMPLOYMENT">Удалённая работа по трудовому договору</option><option value="CONTRACTOR">Работа по договору с заказчиком</option><option value="FREELANCE_OR_SELF_EMPLOYED">Фриланс или самозанятость</option><option value="SOLE_PROPRIETOR">ИП</option><option value="COMPANY_OWNER">Владелец компании</option><option value="PASSIVE_INCOME">Пассивный доход</option><option value="OTHER_REGULAR_REMOTE_INCOME">Другой регулярный доход</option></select></label>
-            <label id="primarySourceCountryField" class="field"><span>Страна источника дохода</span><input id="primarySourceCountry" list="countryOptions" placeholder="Название страны"><small>Для фриланса и самозанятости можно не указывать.</small></label><label class="field"><span>Страна банковского счёта</span><input id="primaryBankCountry" list="countryOptions" placeholder="Название страны"></label>
+            <label class="field"><span>Тип дохода</span><select id="primaryType"><option value="">Не выбрано</option><option value="REMOTE_EMPLOYMENT">Удалённая работа по трудовому договору</option><option value="CONTRACTOR">Контракт с заказчиком (без трудовых отношений)</option><option value="FREELANCE_OR_SELF_EMPLOYED">Фриланс или самозанятость</option><option value="SOLE_PROPRIETOR">ИП</option><option value="COMPANY_OWNER">Владелец компании</option><option value="PASSIVE_INCOME">Пассивный доход</option><option value="OTHER_REGULAR_REMOTE_INCOME">Другой регулярный доход</option></select></label>
+            <label id="primarySourceCountryField" class="field"><span>Страна работодателя или источника дохода</span><input id="primarySourceCountry" list="countryOptions" placeholder="Название страны"><small>Показывает, является ли источник иностранным. Для фриланса без одного постоянного заказчика можно не указывать.</small></label><label class="field"><span>Страна банковского счёта</span><input id="primaryBankCountry" list="countryOptions" placeholder="Название страны"><small>Нужна только для проверки пригодности выписок и прослеживаемости поступлений.</small></label>
             <label class="field"><span>Сколько можете подтвердить в месяц?</span><div class="money-combo"><input id="primaryAmount" type="number" min="0" placeholder="3000"><select id="primaryCurrency"><option>USD</option><option>EUR</option><option>RUB</option></select></div></label><label class="field"><span>Какими документами подтверждается доход?</span><select id="primaryEvidence"><option value="">Не выбрано</option><option value="FULL">Полностью: договор и движение денег</option><option value="PARTIAL">Частично</option><option value="NONE">Пока нет документов</option></select></label>
           </div></div>
           <label class="toggle-row"><span><b>Есть ещё один источник дохода</b><small>Проверим его отдельно</small></span><input id="hasAdditionalIncome" type="checkbox"><i></i></label><div id="additionalIncomeBlock" class="conditional-card" hidden></div>
@@ -70,8 +70,8 @@
       <aside class="sidebar"><section class="surface profile-card"><div class="card-title"><h2>Ваш профиль</h2><span class="round-icon">○</span></div><div id="profileSummary" class="summary-list"><p class="empty-profile-message">Профиль пока не заполнен</p></div></section><section class="benefit-card"><h2>Как работает расчёт</h2><ul><li><span>1</span><div><b>Проверяем каждый вариант</b><small>Ни один маршрут не получает приоритет заранее.</small></div></li><li><span>2</span><div><b>Отделяем право от удобства</b><small>Юридические требования и семейный бюджет оцениваются отдельно.</small></div></li><li><span>3</span><div><b>Показываем, что можно изменить</b><small>В результате объясняем причину и нужное условие.</small></div></li></ul></section></aside>
     </section>
     <section id="resultView" class="result-layout" hidden><div id="result" class="surface result-main"></div><aside class="sidebar"><section class="benefit-card next-card"><h2>Что дальше</h2><button id="editProfile" class="secondary-button full" type="button">Изменить ответы</button><a class="outline-link" href="../pilot/">Открыть старый пилот</a></section></aside></section>
-    <footer class="version-footer" aria-label="Версия приложения">Immigration Matcher · версия 0.6.2</footer>
+    <footer class="version-footer" aria-label="Версия приложения">Immigration Matcher · версия 0.7.0</footer>
   </main>
-  <datalist id="countryOptions"></datalist><div id="toast" class="toast" role="status" hidden></div><script type="module" src="./app.js?v=20260720-2"></script>
+  <datalist id="countryOptions"></datalist><div id="toast" class="toast" role="status" hidden></div><script type="module" src="./app.js?v=20260720-3"></script>
 </body>
 </html>

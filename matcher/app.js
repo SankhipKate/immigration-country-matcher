@@ -2,8 +2,8 @@ import { STATUS_LABELS_RU } from '../js/spain-calculator.js';
 import { calculateCountries } from '../js/engine/calculate-countries.js';
 import { spainAdapter } from '../js/countries/spain-adapter.js';
 import { loadCalculationContext } from '../pilot/fx-context.js';
-import { countryOptions, parseCountryCode } from './countries.js';
-import { buildUserProfile, collectEligibleFollowUps, describeIncomeRequirement, describeResultIntro, validateAgainstSchema, validateUserProfile } from './profile.js';
+import { countryOptions, parseCountryCode, searchCountries } from './countries.js';
+import { buildUserProfile, describeIncomeRequirement, describeResultIntro, validateAgainstSchema, validateUserProfile } from './profile.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -26,9 +26,9 @@ const html = (text) => String(text ?? '').replaceAll('&', '&amp;').replaceAll('<
 const currency = (amount, code = 'USD') => new Intl.NumberFormat('ru-RU', { style: 'currency', currency: code, maximumFractionDigits: 0 }).format(Number(amount || 0));
 
 const INCOME_FIELDS = (prefix, title) => `<h3>${title}</h3><div class="field-grid two-col">
-  <label class="field"><span>Тип дохода</span><select id="${prefix}Type"><option value="">Не выбрано</option><option value="REMOTE_EMPLOYMENT">Удалённая работа по трудовому договору</option><option value="CONTRACTOR">Работа по договору с заказчиком</option><option value="FREELANCE_OR_SELF_EMPLOYED">Фриланс или самозанятость</option><option value="SOLE_PROPRIETOR">ИП</option><option value="COMPANY_OWNER">Владелец компании</option><option value="PASSIVE_INCOME">Пассивный доход</option><option value="OTHER_REGULAR_REMOTE_INCOME">Другой регулярный доход</option></select></label>
-  <label id="${prefix}SourceCountryField" class="field"><span>Страна источника</span><input id="${prefix}SourceCountry" list="countryOptions" placeholder="Начните вводить название"><small>Для фриланса и самозанятости можно не указывать.</small></label>
-  <label class="field"><span>Страна банка</span><input id="${prefix}BankCountry" list="countryOptions" placeholder="Начните вводить название"></label>
+  <label class="field"><span>Тип дохода</span><select id="${prefix}Type"><option value="">Не выбрано</option><option value="REMOTE_EMPLOYMENT">Удалённая работа по трудовому договору</option><option value="CONTRACTOR">Контракт с заказчиком (без трудовых отношений)</option><option value="FREELANCE_OR_SELF_EMPLOYED">Фриланс или самозанятость</option><option value="SOLE_PROPRIETOR">ИП</option><option value="COMPANY_OWNER">Владелец компании</option><option value="PASSIVE_INCOME">Пассивный доход</option><option value="OTHER_REGULAR_REMOTE_INCOME">Другой регулярный доход</option></select></label>
+  <label id="${prefix}SourceCountryField" class="field"><span>Страна работодателя или источника</span><input id="${prefix}SourceCountry" list="countryOptions" placeholder="Начните вводить название"><small>Для фриланса без одного постоянного заказчика можно не указывать.</small></label>
+  <label class="field"><span>Страна банка</span><input id="${prefix}BankCountry" list="countryOptions" placeholder="Начните вводить название"><small>Используется для проверки пригодности выписок, а не для выбора маршрута.</small></label>
   <label class="field"><span>Сколько можете подтвердить в месяц?</span><div class="money-combo"><input id="${prefix}Amount" type="number" min="0"><select id="${prefix}Currency"><option>USD</option><option>EUR</option><option>RUB</option></select></div></label>
   <label class="field"><span>Какими документами подтверждается доход?</span><select id="${prefix}Evidence"><option value="">Не выбрано</option><option value="FULL">Полностью: договор и движение денег</option><option value="PARTIAL">Частично</option><option value="NONE">Пока нет документов</option></select></label>
 </div>`;
@@ -36,6 +36,38 @@ const INCOME_FIELDS = (prefix, title) => `<h3>${title}</h3><div class="field-gri
 $('#additionalIncomeBlock').innerHTML = INCOME_FIELDS('additional', 'Дополнительный доход заявителя');
 $('#partnerIncomeBlock').innerHTML = INCOME_FIELDS('partner', 'Доход партнёра');
 $('#countryOptions').innerHTML = countryOptions().map(({ label }) => `<option value="${html(label)}"></option>`).join('');
+
+function enhanceCountrySearch(input) {
+  if (input.dataset.searchReady) return;
+  input.dataset.searchReady = 'true';
+  input.removeAttribute('list');
+  input.setAttribute('autocomplete', 'off');
+  const menu = document.createElement('div');
+  menu.className = 'country-search-results';
+  menu.hidden = true;
+  input.insertAdjacentElement('afterend', menu);
+  const render = () => {
+    const matches = searchCountries(input.value);
+    menu.replaceChildren(...matches.map((country) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = country.label;
+      button.addEventListener('mousedown', (event) => {
+        event.preventDefault();
+        input.value = country.label;
+        menu.hidden = true;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+      return button;
+    }));
+    menu.hidden = matches.length === 0;
+  };
+  input.addEventListener('input', render);
+  input.addEventListener('focus', render);
+  input.addEventListener('blur', () => setTimeout(() => { menu.hidden = true; }, 100));
+}
+
+$$('input[list="countryOptions"]').forEach(enhanceCountrySearch);
 
 function collectAnswers() {
   const childAges = $$('#childAges input').map((input) => input.value);
@@ -196,25 +228,24 @@ function longTermConditions(route) {
 }
 
 function routeCard(route, countryName, main = false) {
+  const unsuitable = route.routeStatus === 'UNSUITABLE';
   const incomeTypeBlocked = route.incomeTypeFit === 'DOES_NOT_MEET';
   const requirement = describeIncomeRequirement(route, currency);
   const visibleBlockers = (route.blockers || []).filter((item) => !incomeTypeBlocked || !item.includes('Тип дохода несовместим'));
   const reasons = [...(incomeTypeBlocked ? [requirement] : []), ...visibleBlockers];
   const reasonsBlock = reasons.length ? `<div class="route-reasons"><h4>${reasons.length > 1 ? 'Почему не подходит — несколько независимых причин' : 'Почему не подходит'}</h4><ul>${reasons.map((item) => `<li>${html(item)}</li>`).join('')}</ul></div>` : '';
   const countryMissing = route.countryMissing || route.missing || [];
-  const missingBlock = countryMissing.length ? `<div class="route-open-items"><h4>Что ещё не подтверждено для этого варианта</h4><ul>${countryMissing.map((item) => `<li>${html(item)}</li>`).join('')}</ul></div>` : '';
+  const missingBlock = !unsuitable && countryMissing.length ? `<div class="route-open-items"><h4>Что ещё не подтверждено для этого варианта</h4><ul>${countryMissing.map((item) => `<li>${html(item)}</li>`).join('')}</ul></div>` : '';
   const clientMissing = route.clientMissing || route.preliminary || [];
-  const clientMissingBlock = clientMissing.length ? `<div class="route-client-items"><h4>Что нужно уточнить у вас</h4><ul>${clientMissing.map((item) => `<li>${html(item)}</li>`).join('')}</ul></div>` : '';
-  const finance = incomeTypeBlocked ? '' : `<p class="financial-rule">${html(requirement)}</p>`;
-  return `<article class="route-result ${main ? 'best' : ''}"><div><span class="status-pill ${statusClass(route.routeStatus)}">${html(STATUS_LABELS_RU[route.routeStatus])}</span><h3>${html(route.routeName)}</h3><p>Расчёт выполнен для страны «${html(countryName)}» по гражданству РФ.</p></div>${finance}${reasonsBlock}${missingBlock}${clientMissingBlock}${longTermConditions(route)}</article>`;
+  const clientMissingBlock = !unsuitable && clientMissing.length ? `<div class="route-client-items"><h4>Что потребуется для этого маршрута</h4><ul>${clientMissing.map((item) => `<li>${html(item)}</li>`).join('')}</ul></div>` : '';
+  const finance = incomeTypeBlocked || route.incomeTypeFit === 'NOT_APPLICABLE' ? '' : `<p class="financial-rule">${html(requirement)}</p>`;
+  return `<article class="route-result ${main ? 'best' : ''}"><div><span class="status-pill ${statusClass(route.routeStatus)}">${html(STATUS_LABELS_RU[route.routeStatus])}</span><h3>${html(route.routeName)}</h3><p>Расчёт выполнен для страны «${html(countryName)}» по гражданству РФ.</p></div>${finance}${reasonsBlock}${missingBlock}${clientMissingBlock}${unsuitable ? '' : longTermConditions(route)}</article>`;
 }
 
 function renderCountryResult(calculation, changed = false) {
   const best = calculation.bestRoute;
-  const followUps = collectEligibleFollowUps(calculation);
   const children = calculation.profile.children?.length || 0;
   const family = `${calculation.profile.adults} ${calculation.profile.adults === 1 ? 'взрослый' : 'взрослых'}${children ? `, ${children} ${children === 1 ? 'ребёнок' : 'детей'}` : ''}`;
-  const followUpHtml = followUps.length ? `<section class="follow-up-card"><h3>Нужно одно уточнение</h3><p>Оно относится только к варианту «${html(followUps[0].routeName)}» и может изменить предварительный статус.</p><label class="field"><span>Как планируете подтвердить участие в системе социального страхования Испании?</span><select id="socialSecurityPlan"><option value="">Не знаю</option><option value="REGISTER_IN_SPAIN">Зарегистрироваться в Испании</option><option value="FOREIGN_COVERAGE_CERTIFICATE">Использовать подтверждение из другой страны</option><option value="SELF_EMPLOYED_SPAIN">Оформиться как самостоятельный работник в Испании</option></select></label><button id="recalculate" class="primary-button" type="button">Уточнить результат</button></section>` : '';
   const { heading: resultHeading, routeLabel } = describeResultIntro(calculation.routes, changed);
   const countryName = calculation.country.name;
   const countryId = calculation.country.countryId;
@@ -224,7 +255,7 @@ function renderCountryResult(calculation, changed = false) {
   const otherPetWarning = currentProfile?.pets?.types?.includes('OTHER') ? '<div class="route-open-items practical-warning"><h4>Нужна отдельная проверка животного</h4><p>У вас указано другое животное. Правила его ввоза зависят от конкретного вида и страны происхождения. Перед переездом потребуется отдельная проверка правил для этой страны.</p></div>' : '';
   return `<details class="country-comparison"><summary class="country-result-banner" data-country-id="${html(countryId)}"><span class="country-flag" aria-hidden="true">${flag}</span><div class="country-summary-text"><small>Страна расчёта</small><h2>${html(countryName)}</h2><p>${routeLabel}: <b>${html(best?.routeName || 'не определён')}</b></p></div><span class="status-pill ${statusClass(best?.routeStatus)}">${html(STATUS_LABELS_RU[best?.routeStatus] || 'Требует проверки')}</span><span class="country-toggle" aria-hidden="true">⌄</span></summary><div class="country-comparison-body"><div class="result-head"><div><h2>${resultHeading}</h2><p>Все варианты ниже относятся только к стране «${html(countryName)}».</p></div></div>
     <div class="kpi-grid three"><div class="kpi"><span>Состав семьи</span><b>${html(family)}</b></div><div class="kpi"><span>Подтверждаемый доход после пересчёта</span><b>${best?.incomeEur == null ? 'Не рассчитан' : currency(best.incomeEur, 'EUR')}</b></div><div class="kpi"><span>${thresholdLabel}</span><b>${thresholdValue}</b></div></div>${otherPetWarning}
-    ${best ? routeCard(best, countryName, true) : ''}${followUpHtml}<section><div class="section-title-row"><div><h3>Другие проверенные варианты</h3><p>Каждый вариант проверен отдельно по вашим фактическим ответам.</p></div></div><div class="alternative-routes">${calculation.routes.filter((route) => route.routeId !== best?.routeId).map((route) => routeCard(route, countryName)).join('')}</div></section>
+    ${best ? routeCard(best, countryName, true) : ''}<section><div class="section-title-row"><div><h3>Другие проверенные варианты</h3><p>Каждый вариант проверен отдельно по вашим фактическим ответам.</p></div></div><div class="alternative-routes">${calculation.routes.filter((route) => route.routeId !== best?.routeId).map((route) => routeCard(route, countryName)).join('')}</div></section>
     <section><div class="section-title-row"><div><h3>Практический семейный бюджет</h3><p>Обычные расходы семьи; школа учитывается отдельно, только если она нужна.</p></div></div>${calculation.recommendedCity ? `<div class="city-card recommended"><h4>${html(calculation.recommendedCity.cityName)}</h4><strong>${currency(calculation.recommendedCity.costUsd)}/мес</strong></div>` : '<p>Город не определён.</p>'}</section>
     <p class="result-note">Статус исследовательского пакета: ${html(calculation.country.researchStatus || 'не указан')}. Он не равен статусу конкретного маршрута: даже в исследованной стране у отдельного кейса могут оставаться неподтверждённые условия. Расчёт: ${html(calculation.calculatedAt?.slice(0, 10))}. Курс валют: ${html(calculationContext.fx.as_of?.slice(0, 10))}, источник ${html(calculationContext.fx.source)}. Результат предварительный и не является юридическим обещанием.</p></div></details>`;
 }
@@ -235,7 +266,6 @@ function calculateAllCountries() {
 
 function renderResult(calculation, changed = false) {
   $('#result').innerHTML = `<div class="comparison-intro"><h2>Сравнение стран</h2><p>Одна анкета независимо проверена для каждой доступной страны.</p></div>${calculation.results.map((country) => renderCountryResult(country, changed)).join('')}`;
-  if ($('#recalculate')) $('#recalculate').addEventListener('click', recalculateWithFollowUp);
 }
 
 function switchToResult(calculation, changed = false) {
@@ -245,13 +275,6 @@ function switchToResult(calculation, changed = false) {
   $('#heroTitle').textContent = 'Ваш результат';
   $('#heroSubtitle').textContent = 'Мы независимо проверили доступные страны и отдельно оценили семейные условия.';
   window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function recalculateWithFollowUp() {
-  const answer = value('socialSecurityPlan');
-  if (!answer) { showToast('Выберите ответ или оставьте предварительный результат'); return; }
-  currentProfile.route_specific_answers = { ...currentProfile.route_specific_answers, ES_DNV: { social_security_plan: answer } };
-  switchToResult(calculateAllCountries(), true);
 }
 
 function showToast(message) { const toast = $('#toast'); toast.textContent = message; toast.hidden = false; clearTimeout(showToast.timer); showToast.timer = setTimeout(() => { toast.hidden = true; }, 2600); }
