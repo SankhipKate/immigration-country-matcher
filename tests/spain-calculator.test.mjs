@@ -71,7 +71,7 @@ test('best-variant selection uses a separate preference order', () => {
 test('remote employee with sufficient converted income selects DNV', () => {
   const result = calculate({ plannedBasis: 'REMOTE_EMPLOYEE', monthlyIncomeUsd: 3200 });
   assert.equal(result.bestRoute.routeId, 'ES_DNV');
-  assert.equal(result.bestRoute.routeStatus, 'SUITABLE_WITH_CONDITIONS');
+  assert.equal(result.bestRoute.routeStatus, 'SUITABLE');
 });
 
 test('currency conversion prevents comparing USD directly with an EUR threshold', () => {
@@ -103,6 +103,15 @@ test('NLV fails when passive resources are below the threshold', () => {
   const result = calculate({ plannedBasis: 'PASSIVE_INCOME', monthlyIncomeUsd: 1800 });
   assert.equal(result.bestRoute.routeId, 'ES_NLV');
   assert.equal(result.bestRoute.routeStatus, 'UNSUITABLE');
+});
+
+test('every NLV blocker has a corresponding corrective action', () => {
+  const result = calculate({ plannedBasis: 'PASSIVE_INCOME', monthlyIncomeUsd: 1800, legalResidence: false });
+  const nlv = result.routes.find((route) => route.routeId === 'ES_NLV');
+  assert.equal(nlv.blockers.length, 2);
+  assert.equal(nlv.actions.length, 2);
+  assert.ok(nlv.actions.some((action) => action.includes('Подаваться из России')));
+  assert.ok(nlv.actions.some((action) => action.includes(`${Math.round(nlv.thresholdEur)} EUR`)));
 });
 
 test('Spanish highly-qualified route is preliminary until the offer and qualification are verified', () => {
@@ -144,7 +153,7 @@ test('a family budget below city costs produces a practical mismatch group', () 
     schoolNeeded: true,
     monthlyBudgetUsd: 3000,
   });
-  assert.equal(result.bestRoute.routeStatus, 'SUITABLE_WITH_CONDITIONS');
+  assert.equal(result.bestRoute.routeStatus, 'SUITABLE');
   assert.equal(result.country.group, 'LEGAL_BUT_PRACTICALLY_UNSUITABLE');
 });
 
@@ -171,16 +180,16 @@ test('canonical conflict and selection orders remain independent', () => {
   assert.equal(selectBestVariant([{ routeId: 'review', routeStatus: 'INDIVIDUAL_REVIEW_REQUIRED' }, { routeId: 'missing', routeStatus: 'INSUFFICIENT_COUNTRY_DATA' }]).routeId, 'missing');
 });
 
-test('DNV social security is reported as a mandatory condition without a follow-up', () => {
+test('DNV social security is reported as an initial-permit requirement without making the result yellow', () => {
   const result = calculate({ plannedBasis: 'REMOTE_EMPLOYEE', monthlyIncomeUsd: 5000, socialSecurityPlan: null });
-  assert.equal(result.bestRoute.routeStatus, 'SUITABLE_WITH_CONDITIONS');
+  assert.equal(result.bestRoute.routeStatus, 'SUITABLE');
   assert.deepEqual(result.bestRoute.followUpQuestions, []);
-  assert.ok(result.bestRoute.conditions.some((condition) => condition.includes('социальн')));
+  assert.ok(result.bestRoute.initialPermitRequirements.some((condition) => condition.includes('социальн')));
 });
 
 test('legacy social-security answer does not override the route requirement', () => {
   const result = calculate({ plannedBasis: 'REMOTE_EMPLOYEE', monthlyIncomeUsd: 5000, socialSecurityPlan: 'FOREIGN_CERTIFICATE' });
-  assert.equal(result.bestRoute.routeStatus, 'SUITABLE_WITH_CONDITIONS');
+  assert.equal(result.bestRoute.routeStatus, 'SUITABLE');
   assert.deepEqual(result.bestRoute.followUpQuestions, []);
 });
 
