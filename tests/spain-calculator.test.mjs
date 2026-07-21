@@ -74,6 +74,12 @@ test('remote employee with sufficient converted income selects DNV', () => {
   assert.equal(result.bestRoute.routeStatus, 'SUITABLE');
 });
 
+test('route result keeps income in USD for country-specific presentation', () => {
+  const result = calculate({ plannedBasis: 'REMOTE_EMPLOYEE', monthlyIncomeUsd: 3200 });
+  assert.equal(result.bestRoute.incomeUsd, 3200);
+  assert.equal(result.bestRoute.incomeEur, 2796.8);
+});
+
 test('currency conversion prevents comparing USD directly with an EUR threshold', () => {
   const result = calculate({ plannedBasis: 'REMOTE_EMPLOYEE', monthlyIncomeUsd: 2500 });
   assert.equal(result.bestRoute.routeId, 'ES_DNV');

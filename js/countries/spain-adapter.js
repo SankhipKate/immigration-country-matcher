@@ -334,6 +334,7 @@ function evaluateRoute(route, indexes, profile, context) {
   return {
     routeId: route.route_id, routeName: route.name_ru || route.official_name, routeStatus, statusLabel: STATUS_LABELS_RU[routeStatus],
     applicationNationality: profile.applicationNationality, viaSecondaryNationality: profile.applicationNationality !== 'RU', thresholdEur: income.thresholdEur, incomeEur: income.incomeEur,
+    incomeUsd: profile.monthlyIncomeUsd,
     incomeOriginal: profile.incomeMoney, incomeConversion: profile.incomeConversion, incomeRequirementConversion: income.requirementConversion, basisMissing: Boolean(income.basisMissing),
     goalFit: fits(goal), applicationFit: fits(application), familyFit: fits(family), incomeTypeFit: income.incomeTypeFit, incomeFit: income.incomeFit,
     countryMissingCount: missing.length, clientMissingCount: preliminary.length, conditionsCount: conditions.length,

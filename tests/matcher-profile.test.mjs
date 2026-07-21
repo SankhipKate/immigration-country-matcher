@@ -93,9 +93,10 @@ test('income and budget retain their own currencies', () => {
   assert.deepEqual(profile.preferences.monthly_budget, { amount: 2200, currency: 'EUR' });
 });
 
-test('multiple climate preferences are preserved and pass the schema', () => {
+test('removed city and climate questions use neutral profile defaults', () => {
   const profile = buildUserProfile(answers({ climates: ['TEMPERATE', 'WARM'], climate: undefined }));
-  assert.deepEqual(profile.preferences.climate, ['TEMPERATE', 'WARM']);
+  assert.equal(profile.preferences.city_size, 'ANY');
+  assert.deepEqual(profile.preferences.climate, ['ANY']);
   assert.deepEqual(validateAgainstSchema(profile, profileSchema), []);
 });
 
@@ -165,6 +166,8 @@ test('main matcher has no Spain-specific social-security question', async () => 
   assert.equal(source.includes('социального страхования Испании'), false);
   assert.ok(source.includes('У вас есть гражданство РФ?'));
   assert.match(source, /id="questionnaireView"[^>]*hidden/);
+  assert.equal(source.includes('id="citySize"'), false);
+  assert.equal(source.includes('name="climate"'), false);
 });
 
 test('legacy pilot remains available beside the new matcher', async () => {
@@ -174,4 +177,16 @@ test('legacy pilot remains available beside the new matcher', async () => {
   ]);
   assert.ok(legacy.includes('id="profile-form"'));
   assert.ok(matcher.includes('id="matcherForm"'));
+});
+
+test('result UI shows three city budgets, country climate, and a mobile toggle', async () => {
+  const [app, styles] = await Promise.all([
+    readFile(new URL('../matcher/app.js', import.meta.url), 'utf8'),
+    readFile(new URL('../matcher/styles.css', import.meta.url), 'utf8'),
+  ]);
+  assert.match(app, /\['LARGE', 'MEDIUM', 'SMALL'\]/);
+  assert.match(app, /Климат страны/);
+  assert.equal(app.includes('Для выбранного размера города в пакете пока нет отдельной модели'), false);
+  assert.match(styles, /@media\(max-width:760px\)[\s\S]*\.country-toggle\{display:block/);
+  assert.equal(styles.includes('.country-toggle{display:none}'), false);
 });
