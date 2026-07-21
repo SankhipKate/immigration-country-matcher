@@ -38,6 +38,17 @@ test('Uruguay digital nomad does not invent a fixed minimum income', () => {
   assert.equal(result.bestRoute.thresholdEur, null);
   assert.ok(result.bestRoute.conditions.some((item) => item.includes('декларацию')));
   assert.match(result.bestRoute.incomeGuidance, /25 383 UYU/);
+  assert.match(result.bestRoute.incomeGuidance, /640 USD/);
+  assert.match(result.bestRoute.incomeGuidance, /650 USD/);
+  assert.match(result.bestRoute.incomeExampleSource.url, /expat\.com/);
+});
+
+test('Uruguay cards distinguish direct permanent, temporary, and nomad routes', () => {
+  const result = calculateCountries(remoteProfile(), [uruguay], context, () => spainAdapter).results[0];
+  const guidance = Object.fromEntries(result.routes.map((route) => [route.routeId, route.applicationGuidance]));
+  assert.match(guidance.UY_PERMANENT, /временная резиденция перед ней не обязательна/);
+  assert.match(guidance.UY_TEMPORARY, /не обязательная ступень/);
+  assert.match(guidance.UY_DIGITAL_NOMAD, /автоматического перехода нет/);
 });
 
 test('Uruguay recognizes a same-sex concubine partner with judicial evidence', () => {
