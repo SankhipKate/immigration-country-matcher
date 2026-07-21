@@ -131,12 +131,13 @@ test('four Spanish routes explain their in-country filing rules', () => {
   assert.match(guidance.ES_STUDENT, /только на высшее образование/);
 });
 
-test('practical budget falls back to available cities when requested size is missing', () => {
+test('practical budget has a researched small Spanish city without fallback', () => {
   const profile = strictProfile();
   profile.preferences.city_size = 'SMALL';
   const result = calculateSpain(profile, data, context);
   assert.ok(result.recommendedCity);
-  assert.equal(result.usedCitySizeFallback, true);
+  assert.equal(result.usedCitySizeFallback, false);
+  assert.equal(result.recommendedCity.cityId, 'ES_CASTELLON');
 });
 
 test('student route compares available means with the published IPREM requirement', () => {
@@ -168,7 +169,7 @@ test('a family budget below city costs produces a practical mismatch group', () 
     relationshipType: 'REGISTERED_PARTNERSHIP',
     needsFamilyVisa: true,
     schoolNeeded: true,
-    monthlyBudgetUsd: 3000,
+    monthlyBudgetUsd: 2500,
   });
   assert.equal(result.bestRoute.routeStatus, 'SUITABLE');
   assert.equal(result.country.group, 'LEGAL_BUT_PRACTICALLY_UNSUITABLE');
