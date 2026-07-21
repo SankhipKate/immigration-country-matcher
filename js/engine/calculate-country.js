@@ -51,6 +51,7 @@ export function calculateCountry(profile, countryPackage, calculationContext, co
   });
   const bestRoute = selectBestRoute(routes);
   const practicalResult = countryAdapter.evaluatePractical(countryPackage, normalizedProfile, calculationContext);
+  const lgbtResult = countryAdapter.evaluateLgbt?.(countryPackage, normalizedProfile, indexes, calculationContext) || null;
   const group = countryAdapter.determineCountryGroup(bestRoute, practicalResult, normalizedProfile, routes);
 
   return {
@@ -68,6 +69,7 @@ export function calculateCountry(profile, countryPackage, calculationContext, co
     bestRoute,
     routes,
     ...practicalResult,
+    lgbt: lgbtResult,
     practicalMissing: [...new Set(countryAdapter.collectPracticalMissing?.(countryPackage, normalizedProfile, practicalResult) || [])],
     sources: countryAdapter.collectSources(countryPackage, indexes, bestRoute, practicalResult),
   };

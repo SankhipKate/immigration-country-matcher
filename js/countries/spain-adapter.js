@@ -375,11 +375,33 @@ function evaluatePractical(data, profile) {
     if (budgetFit === 'DOES_NOT_MEET') failures.push('Расчётная стоимость жизни превышает обязательный бюджет.');
     return { cityId: city.city_id, cityName: city.name_ru, populationCategory: city.population_category, costUsd, budgetOriginal: profile.budgetMoney, budgetConversion: profile.budgetConversion, budgetDifference, budgetDifferencePercent, budgetFit,
       budgetProximity, practicalEvaluation: missing.length ? 'UNKNOWN' : failures.length ? 'DOES_NOT_MEET' : 'MEETS',
-      missing, failures, airport: city.airport_name, climate: city.climate_category, primarySourceId: city.primary_source_id };
+      missing, failures, airport: city.airport_name, climate: city.climate_category,
+      avgTempColdestMonthC: city.avg_temp_coldest_month_c ?? null,
+      avgTempHottestMonthC: city.avg_temp_hottest_month_c ?? null,
+      climateSourceId: city.climate_source_id || null,
+      climateSource: (data.sources || []).find((source) => source.source_id === city.climate_source_id) || null,
+      lgbtSafety: city.lgbt_safety || null,
+      primarySourceId: city.primary_source_id };
   });
   const practicalRank = { MEETS: 3, UNKNOWN: 2, DOES_NOT_MEET: 1 };
   cities.sort((a, b) => practicalRank[b.practicalEvaluation] - practicalRank[a.practicalEvaluation] || a.costUsd - b.costUsd);
   return { cities, recommendedCity: cities[0] || null, usedCitySizeFallback, requestedCitySize: profile.citySize };
+}
+
+function evaluateLgbt(data, profile, indexes) {
+  if (!profile.lgbt?.enabled) return null;
+  const rules = (data.lgbt_rules || []).map((rule) => ({
+    id: rule.lgbt_rule_id,
+    topic: rule.topic,
+    legalStatus: rule.legal_status,
+    practicalStatus: rule.practical_status,
+    familyRouteImpact: rule.family_route_impact,
+    safetyLevel: rule.safety_level,
+    notes: rule.notes,
+    confidence: rule.confidence,
+    source: indexes.sources.get(rule.source_id) || null,
+  }));
+  return { enabled: true, rules };
 }
 
 function determineCountryGroup(bestRoute, practical, profile, routes = []) {
@@ -403,4 +425,4 @@ function collectPracticalMissing(data, profile, practical) {
   return missing;
 }
 
-export const spainAdapter = Object.freeze({ id: 'spain', normalizeProfile, validateContext, buildIndexes, evaluateRoute, evaluatePractical, determineCountryGroup, collectSources, collectPracticalMissing });
+export const spainAdapter = Object.freeze({ id: 'spain', normalizeProfile, validateContext, buildIndexes, evaluateRoute, evaluatePractical, evaluateLgbt, determineCountryGroup, collectSources, collectPracticalMissing });

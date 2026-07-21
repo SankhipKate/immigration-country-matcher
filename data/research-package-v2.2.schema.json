@@ -2582,6 +2582,12 @@
             }
           ]
         },
+        "climate_source_id": {
+          "anyOf": [
+            { "type": "string" },
+            { "type": "null" }
+          ]
+        },
         "humidity_category": {
           "anyOf": [
             {

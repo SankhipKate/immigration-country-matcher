@@ -56,6 +56,14 @@
 .country-comparison[open] .country-toggle{transform:rotate(180deg)}
 .city-budget-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .city-budget-grid .city-card small{display:block;margin-bottom:4px;color:var(--blue-700);font-weight:800}
+.climate-grid .city-card span{display:block;margin-top:7px;color:#46596e}
+.climate-grid .city-card a{display:inline-block;margin-top:10px;color:var(--navy);font-weight:700;text-underline-offset:3px}
+.lgbt-research{padding:20px;border:1px solid #cabbea;border-radius:16px;background:#fbf9ff}
+.lgbt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.research-card{padding:16px;border:1px solid #ded5ef;border-radius:13px;background:#fff}
+.research-card h4{margin:0 0 7px}.research-card p{margin:0 0 10px;color:#46596e;line-height:1.55}
+.research-card a{color:var(--navy);font-weight:700;text-underline-offset:3px}.research-gap{color:var(--red-600);font-weight:700}
+.research-caveat{margin:14px 0 0;padding:12px;border-radius:10px;background:#f1ecfb;color:#493d61;line-height:1.5}
 .route-reasons{margin-top:14px;padding:14px;border:1px solid #ecc5cc;border-radius:12px;background:#fff7f8}
 .route-reasons h4{margin:0 0 8px;color:var(--red-600)}
 .route-reasons ul{margin:0;padding-left:20px}
@@ -70,5 +78,5 @@
 .country-comparison-body{padding:22px}
 .country-comparison-body>section{margin-top:22px}
 @media(max-width:1100px){.matcher-layout{grid-template-columns:1fr}}
-@media(max-width:760px){.matcher-layout{display:block}.two-choice,.segmented.four{grid-template-columns:1fr 1fr}.eligibility-gate{padding:20px}.income-block{padding:14px}.route-result,.country-comparison-body{padding:15px}.country-result-banner{align-items:flex-start;flex-wrap:wrap;padding:15px}.country-result-banner .status-pill{margin-left:auto}.country-toggle{display:block;margin-left:auto;font-size:28px;line-height:1}.city-budget-grid{grid-template-columns:1fr}}
+@media(max-width:760px){.matcher-layout{display:block}.two-choice,.segmented.four{grid-template-columns:1fr 1fr}.eligibility-gate{padding:20px}.income-block{padding:14px}.route-result,.country-comparison-body{padding:15px}.country-result-banner{align-items:flex-start;flex-wrap:wrap;padding:15px}.country-result-banner .status-pill{margin-left:auto}.country-toggle{display:block;margin-left:auto;font-size:28px;line-height:1}.city-budget-grid,.lgbt-grid{grid-template-columns:1fr}.lgbt-research{padding:15px}}
 @media(max-width:430px){.two-choice,.segmented.four{grid-template-columns:1fr}.money-combo{grid-template-columns:minmax(0,1fr) 82px}}
