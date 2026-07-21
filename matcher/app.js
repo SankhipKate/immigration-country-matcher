@@ -214,6 +214,19 @@ function renderProfileSummary(p) {
 
 function statusClass(status) { return status === 'SUITABLE' ? 'positive' : status === 'UNSUITABLE' ? 'negative' : 'conditional'; }
 
+const LGBT_TOPIC_LABELS = {
+  SAME_SEX_MARRIAGE: 'Брак и семейная иммиграция', MARRIAGE: 'Брак и семейная иммиграция',
+  UNREGISTERED_PARTNER: 'Незарегистрированный партнёр', PARENTHOOD_AND_CHILDREN: 'Дети и родительство',
+  ANTI_DISCRIMINATION: 'Защита от дискриминации', GENDER_IDENTITY: 'Права транс-людей',
+  HATE_CRIME: 'Преступления ненависти', CONVERSION_PRACTICES: 'Конверсионные практики',
+  PRACTICAL_SAFETY: 'Практическая безопасность',
+};
+
+function renderLgbtResearch(calculation) {
+  if (!calculation.lgbt?.rules?.length) return '';
+  return `<section class="lgbt-research"><div class="section-title-row"><div><h3>ЛГБТ: право и реальная жизнь</h3><p>Законы, признание семьи и практическая безопасность оцениваются отдельно.</p></div></div><div class="lgbt-grid">${calculation.lgbt.rules.map((rule) => `<article class="research-card"><h4>${html(LGBT_TOPIC_LABELS[rule.topic] || rule.topic)}</h4><p>${html(rule.notes || 'Описание подтверждённого правила отсутствует.')}</p>${rule.source?.url ? `<a href="${html(rule.source.url)}" target="_blank" rel="noopener">Источник: ${html(rule.source.title || rule.source.authority_name || 'документ')}</a>` : '<span class="research-gap">Источник не приложен</span>'}</article>`).join('')}</div><p class="research-caveat">Важно: высокий уровень правовой защиты не означает отсутствие дискриминации или насилия. Общенациональная статистика не позволяет честно ранжировать отдельные города без сопоставимых городских данных.</p></section>`;
+}
+
 function longTermConditions(route) {
   if (!route.longTerm || ['TEMPORARY_RESIDENCE_SUFFICIENT', 'UNDECIDED'].includes(currentProfile?.goal?.long_term)) return '';
   const rule = route.longTerm;
@@ -263,16 +276,13 @@ function renderCountryResult(calculation, changed = false) {
   const incomeCurrency = countryId === 'ES' ? 'EUR' : 'USD';
   const citySizeLabels = { LARGE: 'Крупный город', MEDIUM: 'Средний город', SMALL: 'Небольшой город' };
   const cityBudgets = ['LARGE', 'MEDIUM', 'SMALL'].map((size) => calculation.cities.find((city) => city.populationCategory === size)).filter(Boolean);
-  const climateText = countryId === 'ES'
-    ? 'В среднем климат Испании тёплый и разнообразный: средиземноморский на большей части побережья, более прохладный и влажный на севере, континентальный во внутренних районах. Малага, Аликанте, Валенсия и Кастельон отличаются мягкой зимой и жарким летом; Канарские острова — субтропическим климатом.'
-    : countryId === 'UY'
-      ? 'В среднем климат Уругвая умеренный и влажный, с выраженными сезонами. На побережье и в Монтевидео мягче и ветренее; Сальто на северо-западе заметно жарче летом; Мальдонадо смягчается влиянием Атлантики.'
-      : 'Климат страны требует отдельного описания.';
+  const climateCities = cityBudgets.filter((city) => city.avgTempColdestMonthC != null && city.avgTempHottestMonthC != null);
   return `<details class="country-comparison"><summary class="country-result-banner" data-country-id="${html(countryId)}"><span class="country-flag" aria-hidden="true">${flag}</span><div class="country-summary-text"><small>Страна расчёта</small><h2>${html(countryName)}</h2><p>${routeLabel}: <b>${html(best?.routeName || 'не определён')}</b></p></div><span class="status-pill ${statusClass(best?.routeStatus)}">${html(STATUS_LABELS_RU[best?.routeStatus] || 'Требует проверки')}</span><span class="country-toggle" aria-hidden="true">⌄</span></summary><div class="country-comparison-body"><div class="result-head"><div><h2>${resultHeading}</h2><p>Все варианты ниже относятся только к стране «${html(countryName)}».</p></div></div>
     <div class="kpi-grid three"><div class="kpi"><span>Состав семьи</span><b>${html(family)}</b></div><div class="kpi"><span>Подтверждаемый доход после пересчёта</span><b>${incomeAmount == null ? 'Не рассчитан' : currency(incomeAmount, incomeCurrency)}</b></div><div class="kpi"><span>${thresholdLabel}</span><b>${thresholdValue}</b></div></div>${otherPetWarning}
     <section><div class="section-title-row"><div><h3>Все проверенные варианты</h3><p>Сначала показаны подходящие, затем предварительно подходящие и требующие проверки, в конце — неподходящие.</p></div></div><div class="alternative-routes">${sortedRoutes.map((route) => routeCard(route, countryName, route.routeId === best?.routeId)).join('')}</div></section>
     <section><div class="section-title-row"><div><h3>Практический семейный бюджет</h3><p>Три ориентира для вашего состава семьи. Школа и детский сад в суммы не включены.</p></div></div>${cityBudgets.length ? `<div class="city-budget-grid">${cityBudgets.map((city) => `<div class="city-card"><small>${html(citySizeLabels[city.populationCategory])}</small><h4>${html(city.cityName)}</h4><strong>${currency(city.costUsd)}/мес</strong></div>`).join('')}</div>` : '<p>Для этой страны пока нет модели стоимости жизни.</p>'}</section>
-    <section><div class="section-title-row"><div><h3>Климат страны</h3></div></div><p>${html(climateText)}</p></section>
+    <section><div class="section-title-row"><div><h3>Климат: конкретные температуры</h3><p>Средняя температура самого холодного и самого жаркого месяца — это не дневной минимум и максимум.</p></div></div>${climateCities.length ? `<div class="city-budget-grid climate-grid">${climateCities.map((city) => `<div class="city-card"><small>${html(citySizeLabels[city.populationCategory])}</small><h4>${html(city.cityName)}</h4><span>Холодный месяц: <b>${html(city.avgTempColdestMonthC)} °C</b></span><span>Жаркий месяц: <b>${html(city.avgTempHottestMonthC)} °C</b></span>${city.climateSource?.url ? `<a href="${html(city.climateSource.url)}" target="_blank" rel="noopener">Источник температур</a>` : ''}</div>`).join('')}</div>` : '<p>Точные городские температуры ещё не исследованы.</p>'}</section>
+    ${renderLgbtResearch(calculation)}
     <p class="result-note">Юридические правила маршрутов проверены по указанным источникам. Стоимость жизни — ориентировочная практическая оценка. Расчёт: ${html(calculation.calculatedAt?.slice(0, 10))}. Курс валют: ${html(calculationContext.fx.as_of?.slice(0, 10))}, источник ${html(calculationContext.fx.source)}. Результат предварительный и не является юридическим обещанием.</p></div></details>`;
 }
 
