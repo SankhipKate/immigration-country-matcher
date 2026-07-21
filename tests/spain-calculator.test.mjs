@@ -166,7 +166,7 @@ test('unknown multiple-citizenship rule does not invent a hard conflict', () => 
   assert.equal(result.bestRoute.routeStatus, 'INSUFFICIENT_COUNTRY_DATA');
 });
 
-test('a family budget below city costs produces a practical mismatch group', () => {
+test('a family budget below city costs does not change legal suitability', () => {
   const result = calculate({
     plannedBasis: 'REMOTE_EMPLOYEE',
     monthlyIncomeUsd: 6000,
@@ -178,7 +178,8 @@ test('a family budget below city costs produces a practical mismatch group', () 
     monthlyBudgetUsd: 2500,
   });
   assert.equal(result.bestRoute.routeStatus, 'SUITABLE');
-  assert.equal(result.country.group, 'LEGAL_BUT_PRACTICALLY_UNSUITABLE');
+  assert.equal(result.country.group, 'SUITABLE');
+  assert.equal(result.cities[0].budgetFit, 'DOES_NOT_MEET');
 });
 
 test('all six Spain routes are independently evaluated', () => {

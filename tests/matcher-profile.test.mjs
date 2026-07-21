@@ -179,15 +179,18 @@ test('legacy pilot remains available beside the new matcher', async () => {
   assert.ok(matcher.includes('id="matcherForm"'));
 });
 
-test('result UI shows three city budgets, concrete climate, LGBT research, and a mobile toggle', async () => {
+test('result UI shows role-based city budgets, temperature ranges, legal LGBT research, and a mobile toggle', async () => {
   const [app, styles] = await Promise.all([
     readFile(new URL('../matcher/app.js', import.meta.url), 'utf8'),
     readFile(new URL('../matcher/styles.css', import.meta.url), 'utf8'),
   ]);
-  assert.match(app, /\['LARGE', 'MEDIUM', 'SMALL'\]/);
-  assert.match(app, /Климат: конкретные температуры/);
-  assert.match(app, /ЛГБТ: право и реальная жизнь/);
-  assert.match(app, /avgTempColdestMonthC/);
+  assert.match(app, /Самый жаркий/);
+  assert.match(app, /Самый прохладный/);
+  assert.match(app, /Самый дорогой/);
+  assert.match(app, /Самый недорогой/);
+  assert.match(app, /ЛГБТ: права, семья и иммиграция/);
+  assert.match(app, /средние дневные минимумы и максимумы/);
+  assert.equal(app.includes("'HATE_CRIME', 'PRACTICAL_SAFETY'"), true);
   assert.equal(app.includes('Для выбранного размера города в пакете пока нет отдельной модели'), false);
   assert.match(styles, /@media\(max-width:760px\)[\s\S]*\.country-toggle\{display:block/);
   assert.equal(styles.includes('.country-toggle{display:none}'), false);

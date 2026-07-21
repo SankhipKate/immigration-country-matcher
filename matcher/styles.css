@@ -27,6 +27,8 @@
 .money-combo{display:grid;grid-template-columns:1fr 92px;border:1px solid var(--line-strong);border-radius:12px;overflow:hidden;background:#fff}
 .money-combo input,.money-combo select{border:0!important;border-radius:0!important;box-shadow:none!important}
 .money-combo select{border-left:1px solid var(--line)!important}
+.income-block .field-grid{align-items:start}.money-combo{height:48px}.money-combo-fixed-currency{grid-template-columns:1fr 132px}.money-combo-fixed-currency>span{display:flex;align-items:center;padding:0 12px;border-left:1px solid var(--line);color:var(--muted);font-size:13px}.budget-entry{display:grid;gap:12px;max-width:650px}.compact-toggle{padding:11px 14px;min-height:0}
+.city-role-list{display:flex;flex-wrap:wrap;gap:6px}.city-role-list span{padding:4px 8px;border-radius:999px;background:#eaf2ff;color:#174f9b;font-size:12px;font-weight:700}.budget-ok{color:#137333}.budget-short{color:#a53a2a}
 .field textarea{width:100%;min-height:100px;padding:12px 14px;border:1px solid var(--line-strong);border-radius:12px;resize:vertical}
 .route-result{margin-top:14px;padding:18px;border:1px solid var(--line);border-radius:15px;background:#fff}
 .route-result.best{border-color:var(--blue-600);background:#f7fbff}

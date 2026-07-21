@@ -372,7 +372,6 @@ function evaluatePractical(data, profile) {
     if (profile.petTypes && !profile.petTypes.includes('NONE') && city.pet_friendly_housing === 'UNKNOWN') missing.push('Доступность аренды с животными ещё не подтверждена.');
     if (profile.schoolNeeded && city.international_school_available === 'UNKNOWN') missing.push('Доступность обязательной международной школы не подтверждена.');
     if (profile.schoolNeeded && city.international_school_available === 'NO') failures.push('Обязательная международная школа недоступна.');
-    if (budgetFit === 'DOES_NOT_MEET') failures.push('Расчётная стоимость жизни превышает обязательный бюджет.');
     return { cityId: city.city_id, cityName: city.name_ru, populationCategory: city.population_category, costUsd, budgetOriginal: profile.budgetMoney, budgetConversion: profile.budgetConversion, budgetDifference, budgetDifferencePercent, budgetFit,
       budgetProximity, practicalEvaluation: missing.length ? 'UNKNOWN' : failures.length ? 'DOES_NOT_MEET' : 'MEETS',
       missing, failures, airport: city.airport_name, climate: city.climate_category,
@@ -407,9 +406,7 @@ function evaluateLgbt(data, profile, indexes) {
 function determineCountryGroup(bestRoute, practical, profile, routes = []) {
   if (!bestRoute || (routes.length > 0 && routes.every((route) => route.routeStatus === ROUTE_STATUSES.UNSUITABLE))) return 'UNSUITABLE';
   if ([ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, ROUTE_STATUSES.INDIVIDUAL_REVIEW_REQUIRED].includes(bestRoute.routeStatus)) return 'REQUIRES_REVIEW';
-  if (practical.recommendedCity?.practicalEvaluation === 'UNKNOWN') return 'REQUIRES_REVIEW';
   if (bestRoute.routeStatus === ROUTE_STATUSES.PRELIMINARY_SUITABLE) return 'PRELIMINARY';
-  if (practical.recommendedCity?.practicalEvaluation === 'DOES_NOT_MEET') return 'LEGAL_BUT_PRACTICALLY_UNSUITABLE';
   return 'SUITABLE';
 }
 
