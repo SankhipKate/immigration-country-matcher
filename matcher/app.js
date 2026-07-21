@@ -239,9 +239,10 @@ function routeCard(route, countryName, main = false) {
   const clientMissing = (route.clientMissing || route.preliminary || []).filter((item) => !route.actions?.includes(item));
   const clientMissingBlock = !unsuitable && clientMissing.length ? `<div class="route-client-items"><h4>Что потребуется для этого маршрута</h4><ul>${clientMissing.map((item) => `<li>${html(item)}</li>`).join('')}</ul></div>` : '';
   const actionsBlock = route.actions?.length ? `<div class="route-actions"><h4>Что сделать, чтобы маршрут подходил</h4><ol>${route.actions.map((item) => `<li>${html(item)}</li>`).join('')}</ol></div>` : '';
+  const permitRequirementsBlock = route.initialPermitRequirements?.length ? `<div class="route-requirements"><h4>Обязательные документы и действия для первоначального ВНЖ</h4><ul>${route.initialPermitRequirements.map((item) => `<li>${html(item)}</li>`).join('')}</ul></div>` : '';
   const sourceBlock = route.primarySource?.url ? `<p class="route-source"><a href="${html(route.primarySource.url)}" target="_blank" rel="noopener">Официальные требования: ${html(route.primarySource.title || route.routeName)}</a></p>` : '';
   const finance = incomeTypeBlocked || route.incomeTypeFit === 'NOT_APPLICABLE' ? '' : `<p class="financial-rule">${html(requirement)}</p>`;
-  return `<article class="route-result ${main ? 'best' : ''}"><div><span class="status-pill ${statusClass(route.routeStatus)}">${html(STATUS_LABELS_RU[route.routeStatus])}</span><h3>${html(route.routeName)}</h3></div>${finance}${reasonsBlock}${actionsBlock}${missingBlock}${clientMissingBlock}${sourceBlock}${unsuitable ? '' : longTermConditions(route)}</article>`;
+  return `<article class="route-result ${main ? 'best' : ''}"><div><span class="status-pill ${statusClass(route.routeStatus)}">${html(STATUS_LABELS_RU[route.routeStatus])}</span><h3>${html(route.routeName)}</h3></div>${finance}${reasonsBlock}${actionsBlock}${permitRequirementsBlock}${missingBlock}${clientMissingBlock}${sourceBlock}${unsuitable ? '' : longTermConditions(route)}</article>`;
 }
 
 function renderCountryResult(calculation, changed = false) {

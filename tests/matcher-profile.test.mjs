@@ -118,11 +118,11 @@ test('route-specific follow-up answer is preserved outside the main questions', 
   assert.deepEqual(buildUserProfile(answers({ routeSpecificAnswers })).route_specific_answers, routeSpecificAnswers);
 });
 
-test('DNV social security is a route condition, not a follow-up question', () => {
+test('DNV social security is an initial-permit requirement, not a follow-up question', () => {
   const result = calculateSpain(buildUserProfile(answers()), spainData, context);
   const dnv = result.routes.find((route) => route.routeId === 'ES_DNV');
   assert.deepEqual(dnv.followUpQuestions, []);
-  assert.ok(dnv.conditions.some((condition) => condition.includes('социальн')));
+  assert.ok(dnv.initialPermitRequirements.some((condition) => condition.includes('социальн')));
 });
 
 test('income-type mismatch explicitly says that the amount is not the problem', () => {
