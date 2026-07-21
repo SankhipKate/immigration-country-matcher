@@ -37,6 +37,18 @@ test('Uruguay digital nomad does not invent a fixed minimum income', () => {
   const result = calculateCountries(remoteProfile(), [uruguay], context, () => spainAdapter).results[0];
   assert.equal(result.bestRoute.thresholdEur, null);
   assert.ok(result.bestRoute.conditions.some((item) => item.includes('декларацию')));
+  assert.match(result.bestRoute.incomeGuidance, /25 383 UYU/);
+});
+
+test('Uruguay recognizes a same-sex concubine partner with judicial evidence', () => {
+  const profile = remoteProfile();
+  profile.family = { adults_count: 2, partner_included: true, relationship_type: 'UNREGISTERED_PARTNER', children: [], school_needed: false };
+  profile.lgbt = { enabled: true, consent_for_personalization: true };
+  const result = calculateCountries(profile, [uruguay], context, () => spainAdapter).results[0];
+  const permanent = result.routes.find((route) => route.routeId === 'UY_PERMANENT');
+  assert.equal(permanent.checks.some((check) => check.code === 'relationship_rule_unknown'), false);
+  assert.equal(permanent.checks.some((check) => check.code === 'same_sex_family_rule_unknown'), false);
+  assert.ok(permanent.conditions.some((condition) => condition.includes('судебного признания')));
 });
 
 test('Uruguay package contains only routes available to a Russian-citizenship MVP', () => {

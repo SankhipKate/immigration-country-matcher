@@ -99,10 +99,9 @@ function buildIndexes(data) {
 }
 
 function familyThreshold(rule, profile) {
-  const dependants = Math.max(0, Number(profile.adults || 1) + (profile.children?.length || 0) - 1);
   let threshold = Number(rule.minimum_income_main_applicant || 0);
-  if (dependants > 0) threshold += Number(rule.partner_increment_value || 0);
-  if (dependants > 1) threshold += Number(rule.child_increment_value || 0) * (dependants - 1);
+  threshold += Math.max(0, Number(profile.adults || 1) - 1) * Number(rule.partner_increment_value || 0);
+  threshold += (profile.children?.length || 0) * Number(rule.child_increment_value || 0);
   return threshold;
 }
 
@@ -158,7 +157,7 @@ function applicationChecks(route, indexes, profile) {
       if (route.requires_legal_residence_in_application_country !== 'YES') return outcome(ROUTE_STATUSES.SUITABLE, 'current_country_method_allowed', 'Консульская подача в текущей стране предусмотрена.');
       if (confirmedResidentStatuses.has(profile.currentStatus)) return outcome(ROUTE_STATUSES.SUITABLE, 'current_country_residence_confirmed', 'Подтверждённый статус позволяет консульскую подачу в текущей стране.');
       if (profile.currentStatus === 'OTHER_LEGAL_STATUS') return outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'current_country_status_clarification', 'Нужно уточнить, является ли текущий законный статус резидентским.', { field: 'residence.current_status' });
-      return outcome(ROUTE_STATUSES.UNSUITABLE, 'current_country_residence_required', 'Для консульской подачи требуется подтверждённый резидентский статус в текущей стране.');
+      return outcome(ROUTE_STATUSES.UNSUITABLE, 'current_country_residence_required', 'Для консульской подачи требуется подтверждённый резидентский статус в текущей стране или подача из России.');
     };
     const methodRank = { SUITABLE: 6, SUITABLE_WITH_CONDITIONS: 5, PRELIMINARY_SUITABLE: 4, INSUFFICIENT_COUNTRY_DATA: 3, INDIVIDUAL_REVIEW_REQUIRED: 2, UNSUITABLE: 1 };
     const methodChecks = selected.map(evaluateMethod);
@@ -175,31 +174,30 @@ function incomeEvaluation(route, indexes, profile, context) {
   const incomeEur = requirementConversion?.convertedAmount ?? null;
   const base = { incomeEur, requirementConversion };
   if (!profile.plannedBasis) return { ...base, checks: [outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'income_type_missing', 'Нужно указать основной тип дохода.', { field: 'income.primary.type' })], thresholdEur: null, incomeTypeFit: 'UNKNOWN', incomeFit: 'UNKNOWN' };
+  let basisChecks = [];
   if (rule.separateBasis) {
     const basisSelected = rule.scenarios.includes(profile.plannedBasis);
-    if (!basisSelected) return { ...base, checks: [outcome(ROUTE_STATUSES.UNSUITABLE, 'separate_route_basis_required', `${rule.separateBasis} Это отдельное требование маршрута, а не тип вашего текущего дохода.`)], thresholdEur: null, incomeTypeFit: 'NOT_APPLICABLE', incomeFit: 'NOT_APPLICABLE' };
-    const checks = [outcome(rule.individualReview ? ROUTE_STATUSES.INDIVIDUAL_REVIEW_REQUIRED : ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'separate_route_basis_review', rule.separateBasis)];
-    if (rule.missingSalaryThreshold) checks.splice(0, checks.length, outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'hq_salary_missing', 'Зарплатный порог проверяется после получения конкретного предложения работы.'));
-    return { ...base, checks, thresholdEur: null, incomeTypeFit: 'NOT_APPLICABLE', incomeFit: 'NOT_APPLICABLE' };
+    basisChecks = [outcome(basisSelected && rule.individualReview ? ROUTE_STATUSES.INDIVIDUAL_REVIEW_REQUIRED : ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'separate_route_basis_required', rule.separateBasis)];
+    if (!rule.fundsIncomeType) return { ...base, checks: basisChecks, thresholdEur: null, incomeTypeFit: 'NOT_APPLICABLE', incomeFit: 'NOT_APPLICABLE', basisMissing: !basisSelected };
   }
-  if (!rule.incomeTypes.includes(incomeType)) return { ...base, checks: [outcome(ROUTE_STATUSES.UNSUITABLE, 'income_type_incompatible', 'Тип дохода несовместим с правилами этого маршрута.')], thresholdEur: null, incomeTypeFit: 'DOES_NOT_MEET', incomeFit: 'NOT_APPLICABLE' };
+  if (!rule.fundsIncomeType && !rule.incomeTypes.includes(incomeType)) return { ...base, checks: [outcome(ROUTE_STATUSES.UNSUITABLE, 'income_type_incompatible', 'Тип дохода несовместим с правилами этого маршрута.')], thresholdEur: null, incomeTypeFit: 'DOES_NOT_MEET', incomeFit: 'NOT_APPLICABLE' };
   if (rule.individualReview) {
     const message = route.country_id === 'UY'
       ? 'Фиксированный минимальный доход не установлен: достаточность и документы о средствах оцениваются индивидуально.'
       : 'Требуется индивидуальная оценка бизнес-плана и проекта.';
-    return { ...base, checks: [outcome(ROUTE_STATUSES.INDIVIDUAL_REVIEW_REQUIRED, 'individual_income_review', message)], thresholdEur: null, incomeTypeFit: 'MEETS', incomeFit: 'UNKNOWN' };
+    return { ...base, checks: [outcome(ROUTE_STATUSES.INDIVIDUAL_REVIEW_REQUIRED, 'individual_income_review', message)], thresholdEur: null, incomeTypeFit: 'MEETS', incomeFit: 'UNKNOWN', incomeGuidance: route.country_id === 'UY' ? 'Официального фиксированного порога нет. Для ориентира: минимальная зарплата Уругвая с 1 июля 2026 года — 25 383 UYU в месяц, но миграционная служба оценивает достаточность средств индивидуально.' : null };
   }
   if (rule.meansDeclaration) {
     const checks = profile.monthlyIncomeUsd == null
       ? [outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'income_missing', 'Нужно указать средства для проживания и подтвердить их декларацией.', { field: 'income.primary.amount' })]
       : [outcome(ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS, 'means_declaration_required', 'Официальный фиксированный минимум не установлен; потребуется декларация о достаточных средствах.', { condition: 'Подать подписанную декларацию о наличии средств для проживания.' })];
-    return { ...base, checks, thresholdEur: null, incomeTypeFit: 'MEETS', incomeFit: profile.monthlyIncomeUsd == null ? 'UNKNOWN' : 'MEETS' };
+    return { ...base, checks, thresholdEur: null, incomeTypeFit: 'MEETS', incomeFit: profile.monthlyIncomeUsd == null ? 'UNKNOWN' : 'MEETS', incomeGuidance: 'Официального фиксированного порога нет. Для ориентира: минимальная зарплата Уругвая с 1 июля 2026 года — 25 383 UYU в месяц; это ориентир, а не гарантированный порог для разрешения.' };
   }
   if (rule.missingSalaryThreshold) return { ...base, checks: [outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'hq_salary_missing', 'Зарплатный порог проверяется после получения конкретного предложения работы.')], thresholdEur: null, incomeTypeFit: 'NOT_APPLICABLE', incomeFit: 'UNKNOWN' };
-  const incomeRule = indexes.routeIncome.get(`${route.route_id}:${incomeType}`);
+  const incomeRule = indexes.routeIncome.get(`${route.route_id}:${rule.fundsIncomeType || incomeType}`);
   if (!incomeRule) return { ...base, checks: [outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'income_rule_missing', 'Подтверждённое правило дохода отсутствует.')], thresholdEur: null, incomeTypeFit: 'MEETS', incomeFit: 'UNKNOWN' };
   const thresholdEur = familyThreshold(incomeRule, profile);
-  const checks = [];
+  const checks = [...basisChecks];
   if (profile.monthlyIncomeUsd == null) checks.push(outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'income_missing', 'Подтверждаемый доход не указан.', { field: 'income.primary.amount' }));
   else if (incomeEur < thresholdEur) checks.push(outcome(ROUTE_STATUSES.UNSUITABLE, 'income_below_threshold', `Доход после пересчёта составляет около ${Math.round(incomeEur)} EUR, требование маршрута — ${Math.round(thresholdEur)} EUR в месяц.`));
   else if (incomeEur < thresholdEur * 1.1) checks.push(outcome(ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS, 'income_close_to_threshold', 'Доход превышает порог менее чем на 10%.', { condition: 'Поддерживать доход минимум на 10% выше порога.' }));
@@ -214,7 +212,7 @@ function incomeEvaluation(route, indexes, profile, context) {
       : 'Для DNV потребуется испанское социальное страхование либо допустимое подтверждение покрытия по международному соглашению.';
     checks.push(outcome(ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS, 'social_security_required', message, { condition: message }));
   }
-  return { ...base, checks, thresholdEur, incomeTypeFit: 'MEETS', incomeFit: profile.monthlyIncomeUsd == null ? 'UNKNOWN' : incomeEur >= thresholdEur ? 'MEETS' : 'DOES_NOT_MEET' };
+  return { ...base, checks, thresholdEur, incomeTypeFit: 'MEETS', incomeFit: profile.monthlyIncomeUsd == null ? 'UNKNOWN' : incomeEur >= thresholdEur ? 'MEETS' : 'DOES_NOT_MEET', basisMissing: Boolean(rule.separateBasis && !rule.scenarios.includes(profile.plannedBasis)) };
 }
 
 function familyChecks(route, indexes, profile) {
@@ -236,6 +234,9 @@ function familyChecks(route, indexes, profile) {
     checks.push(value === 'YES' ? outcome(ROUTE_STATUSES.SUITABLE, 'relationship_recognized', 'Тип отношений признаётся.')
       : value === 'NO' ? outcome(ROUTE_STATUSES.UNSUITABLE, 'relationship_not_recognized', 'Этот тип отношений не позволяет включить партнёра.')
         : outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'relationship_rule_unknown', 'Признание этого типа отношений не подтверждено.'));
+    if (value === 'YES' && profile.relationshipType === 'UNREGISTERED_PARTNER' && rule.notes) {
+      checks.push(outcome(ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS, 'unregistered_partner_evidence_required', rule.notes, { condition: rule.notes }));
+    }
   }
   if (profile.partnerIncluded && profile.lgbt?.enabled && profile.lgbt?.consent_for_personalization) {
     const field = profile.relationshipType === 'UNREGISTERED_PARTNER' ? 'same_sex_unregistered_partner_allowed' : 'same_sex_partner_allowed';
@@ -298,16 +299,25 @@ function evaluateRoute(route, indexes, profile, context) {
   const preliminary = messages(ROUTE_STATUSES.PRELIMINARY_SUITABLE);
   const review = messages(ROUTE_STATUSES.INDIVIDUAL_REVIEW_REQUIRED);
   const conditions = messages(ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS);
+  const actionByCode = {
+    current_country_residence_required: 'Подаваться из России либо получить подтверждённый резидентский статус в текущей стране.',
+    in_country_method_not_allowed: 'Выбрать предусмотренную маршрутом подачу через консульство; если текущая страна не подходит — подаваться из России.',
+    separate_route_basis_required: null,
+    income_below_threshold: income.thresholdEur == null ? null : `Увеличить подтверждаемые средства минимум до ${Math.round(income.thresholdEur)} EUR в месяц.`,
+    dnv_foreign_income_source_required: 'Подтвердить основную работу или заказчиков за пределами Испании.',
+  };
+  const actions = [...new Set(checks.map((check) => check.code === 'separate_route_basis_required' ? check.message : actionByCode[check.code]).filter(Boolean))];
   return {
     routeId: route.route_id, routeName: route.name_ru || route.official_name, routeStatus, statusLabel: STATUS_LABELS_RU[routeStatus],
     applicationNationality: profile.applicationNationality, viaSecondaryNationality: profile.applicationNationality !== 'RU', thresholdEur: income.thresholdEur, incomeEur: income.incomeEur,
-    incomeOriginal: profile.incomeMoney, incomeConversion: profile.incomeConversion, incomeRequirementConversion: income.requirementConversion,
+    incomeOriginal: profile.incomeMoney, incomeConversion: profile.incomeConversion, incomeRequirementConversion: income.requirementConversion, basisMissing: Boolean(income.basisMissing),
     goalFit: fits(goal), applicationFit: fits(application), familyFit: fits(family), incomeTypeFit: income.incomeTypeFit, incomeFit: income.incomeFit,
     countryMissingCount: missing.length, clientMissingCount: preliminary.length, conditionsCount: conditions.length,
     scenarioAffinity: ROUTE_RULES[route.route_id]?.scenarios?.includes(profile.plannedBasis) ? 1 : 0,
-    checks, conditions, blockers: messages(ROUTE_STATUSES.UNSUITABLE), missing, countryMissing: missing, preliminary, clientMissing: preliminary, review,
+    checks, conditions, blockers: messages(ROUTE_STATUSES.UNSUITABLE), missing, countryMissing: missing, preliminary, clientMissing: preliminary, review, actions,
+    incomeGuidance: income.incomeGuidance || null,
     followUpQuestions: [],
-    primarySourceId: route.primary_source_id, longTerm: indexes.routeStatus.get(route.route_id) || null,
+    primarySourceId: route.primary_source_id, primarySource: indexes.sources.get(route.primary_source_id) || null, longTerm: indexes.routeStatus.get(route.route_id) || null,
     work: indexes.routeWork.get(route.route_id) || null, family: indexes.routeFamily.get(route.route_id) || null,
   };
 }
