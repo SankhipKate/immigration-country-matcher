@@ -185,13 +185,13 @@ function incomeEvaluation(route, indexes, profile, context) {
     const message = route.country_id === 'UY'
       ? 'Фиксированный минимальный доход не установлен: достаточность и документы о средствах оцениваются индивидуально.'
       : 'Требуется индивидуальная оценка бизнес-плана и проекта.';
-    return { ...base, checks: [outcome(ROUTE_STATUSES.INDIVIDUAL_REVIEW_REQUIRED, 'individual_income_review', message)], thresholdEur: null, incomeTypeFit: 'MEETS', incomeFit: 'UNKNOWN', incomeGuidance: route.country_id === 'UY' ? 'Официального фиксированного порога нет. Для ориентира: минимальная зарплата Уругвая с 1 июля 2026 года — 25 383 UYU в месяц, но миграционная служба оценивает достаточность средств индивидуально.' : null };
+    return { ...base, checks: [outcome(ROUTE_STATUSES.INDIVIDUAL_REVIEW_REQUIRED, 'individual_income_review', message)], thresholdEur: null, incomeTypeFit: 'MEETS', incomeFit: 'UNKNOWN', incomeGuidance: route.country_id === 'UY' ? 'Официального фиксированного порога нет. Ориентиры: минимальная зарплата с 1 июля 2026 года — 25 383 UYU (примерно 640 USD) в месяц; в одном публичном личном опыте заявитель сообщил о принятии 650 USD в месяц. Это не официальный минимум и не гарантия решения.' : null };
   }
   if (rule.meansDeclaration) {
     const checks = profile.monthlyIncomeUsd == null
       ? [outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'income_missing', 'Нужно указать средства для проживания и подтвердить их декларацией.', { field: 'income.primary.amount' })]
       : [outcome(ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS, 'means_declaration_required', 'Официальный фиксированный минимум не установлен; потребуется декларация о достаточных средствах.', { condition: 'Подать подписанную декларацию о наличии средств для проживания.' })];
-    return { ...base, checks, thresholdEur: null, incomeTypeFit: 'MEETS', incomeFit: profile.monthlyIncomeUsd == null ? 'UNKNOWN' : 'MEETS', incomeGuidance: 'Официального фиксированного порога нет. Для ориентира: минимальная зарплата Уругвая с 1 июля 2026 года — 25 383 UYU в месяц; это ориентир, а не гарантированный порог для разрешения.' };
+    return { ...base, checks, thresholdEur: null, incomeTypeFit: 'MEETS', incomeFit: profile.monthlyIncomeUsd == null ? 'UNKNOWN' : 'MEETS', incomeGuidance: 'Официального фиксированного порога нет. Ориентиры: минимальная зарплата с 1 июля 2026 года — 25 383 UYU (примерно 640 USD) в месяц; в одном публичном личном опыте заявитель сообщил о принятии 650 USD в месяц. Это не официальный минимум и не гарантия решения.' };
   }
   if (rule.missingSalaryThreshold) return { ...base, checks: [outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'hq_salary_missing', 'Зарплатный порог проверяется после получения конкретного предложения работы.')], thresholdEur: null, incomeTypeFit: 'NOT_APPLICABLE', incomeFit: 'UNKNOWN' };
   const incomeRule = indexes.routeIncome.get(`${route.route_id}:${rule.fundsIncomeType || incomeType}`);
@@ -322,6 +322,15 @@ function evaluateRoute(route, indexes, profile, context) {
   const actions = [...blockerActions, ...enablingActions].filter(Boolean);
   const requirementCodes = new Set(['dnv_foreign_income_source', 'social_security_required']);
   const initialPermitRequirements = checks.filter((check) => requirementCodes.has(check.code)).map((check) => check.message);
+  const applicationGuidance = {
+    ES_DNV: 'Из Испании податься можно, если вы находитесь там законно. При подаче через консульство вне России нужен резидентский статус в стране подачи; альтернативно можно подаваться из России.',
+    ES_ENTREPRENEUR: 'Из Испании податься можно при законном статусе. Заявление на разрешение подаёт сам предприниматель электронно через UGE; из-за рубежа доступен визовый путь.',
+    ES_HIGHLY_QUALIFIED: 'Подача возможна, пока специалист законно находится в Испании, но заявление через UGE подаёт испанский работодатель. Если специалист за рубежом, после одобрения разрешения оформляется виза.',
+    ES_STUDENT: 'Из Испании податься можно только на высшее образование: заявитель должен быть совершеннолетним, находиться законно и подать документы не позднее чем за два месяца до окончания законного статуса и до начала учёбы. Для остальных учебных программ используется консульская подача.',
+    UY_PERMANENT: 'Это прямая постоянная резиденция: временная резиденция перед ней не обязательна. Заявление подаётся внутри Уругвая.',
+    UY_TEMPORARY: 'Это отдельная срочная категория по работе, учёбе или другой временной цели, а не обязательная ступень перед постоянной резиденцией.',
+    UY_DIGITAL_NOMAD: 'Это отдельное разрешение на 6 месяцев с продлением ещё на 6. Затем можно отдельно обратиться за временной или постоянной резиденцией; автоматического перехода нет.',
+  }[route.route_id] || null;
   return {
     routeId: route.route_id, routeName: route.name_ru || route.official_name, routeStatus, statusLabel: STATUS_LABELS_RU[routeStatus],
     applicationNationality: profile.applicationNationality, viaSecondaryNationality: profile.applicationNationality !== 'RU', thresholdEur: income.thresholdEur, incomeEur: income.incomeEur,
@@ -330,7 +339,8 @@ function evaluateRoute(route, indexes, profile, context) {
     countryMissingCount: missing.length, clientMissingCount: preliminary.length, conditionsCount: conditions.length,
     scenarioAffinity: ROUTE_RULES[route.route_id]?.scenarios?.includes(profile.plannedBasis) ? 1 : 0,
     checks, conditions, blockers: messages(ROUTE_STATUSES.UNSUITABLE), missing, countryMissing: missing, preliminary, clientMissing: preliminary, review, actions, initialPermitRequirements,
-    incomeGuidance: income.incomeGuidance || null,
+    incomeGuidance: income.incomeGuidance || null, applicationGuidance,
+    incomeExampleSource: route.country_id === 'UY' ? indexes.sources.get('S_UY_INCOME_CASE') || null : null,
     followUpQuestions: [],
     primarySourceId: route.primary_source_id, primarySource: indexes.sources.get(route.primary_source_id) || null, longTerm: indexes.routeStatus.get(route.route_id) || null,
     work: indexes.routeWork.get(route.route_id) || null, family: indexes.routeFamily.get(route.route_id) || null,
@@ -346,7 +356,10 @@ function familyCost(city, profile) {
 }
 
 function evaluatePractical(data, profile) {
-  const cities = (data.cities || []).filter((city) => profile.citySize === 'ANY' || city.population_category === profile.citySize).map((city) => {
+  const allCities = data.cities || [];
+  const matchingCities = allCities.filter((city) => profile.citySize === 'ANY' || city.population_category === profile.citySize);
+  const usedCitySizeFallback = profile.citySize !== 'ANY' && matchingCities.length === 0 && allCities.length > 0;
+  const cities = (usedCitySizeFallback ? allCities : matchingCities).map((city) => {
     const costUsd = familyCost(city, profile);
     const budgetDifference = profile.monthlyBudgetUsd == null ? null : profile.monthlyBudgetUsd - costUsd;
     const budgetDifferencePercent = profile.monthlyBudgetUsd == null ? null : Math.abs(budgetDifference) / profile.monthlyBudgetUsd * 100;
@@ -365,7 +378,7 @@ function evaluatePractical(data, profile) {
   });
   const practicalRank = { MEETS: 3, UNKNOWN: 2, DOES_NOT_MEET: 1 };
   cities.sort((a, b) => practicalRank[b.practicalEvaluation] - practicalRank[a.practicalEvaluation] || a.costUsd - b.costUsd);
-  return { cities, recommendedCity: cities[0] || null };
+  return { cities, recommendedCity: cities[0] || null, usedCitySizeFallback, requestedCitySize: profile.citySize };
 }
 
 function determineCountryGroup(bestRoute, practical, profile, routes = []) {

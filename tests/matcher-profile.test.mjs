@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { buildUserProfile, describeIncomeRequirement, describeResultIntro, validateAgainstSchema, validateUserProfile } from '../matcher/profile.js';
+import { buildUserProfile, describeIncomeRequirement, describeResultIntro, sortRoutesForDisplay, validateAgainstSchema, validateUserProfile } from '../matcher/profile.js';
 import { calculateSpain } from '../js/spain-calculator.js';
 import { countryOptions, parseCountryCode, searchCountries } from '../matcher/countries.js';
 
@@ -135,6 +135,18 @@ test('all unsuitable routes are not presented as the best option', () => {
   const intro = describeResultIntro([{ routeStatus: 'UNSUITABLE' }, { routeStatus: 'UNSUITABLE' }]);
   assert.equal(intro.heading, 'Сейчас подходящих вариантов не найдено');
   assert.equal(intro.routeLabel, 'Наиболее близкий вариант при изменении условий');
+});
+
+test('result routes are ordered from suitable through preliminary to unsuitable', () => {
+  const routes = [
+    { routeId: 'no', routeStatus: 'UNSUITABLE' },
+    { routeId: 'pre', routeStatus: 'PRELIMINARY_SUITABLE' },
+    { routeId: 'yes', routeStatus: 'SUITABLE' },
+    { routeId: 'review', routeStatus: 'INDIVIDUAL_REVIEW_REQUIRED' },
+    { routeId: 'conditions', routeStatus: 'SUITABLE_WITH_CONDITIONS' },
+  ];
+  assert.deepEqual(sortRoutesForDisplay(routes).map(({ routeId }) => routeId), ['yes', 'conditions', 'pre', 'review', 'no']);
+  assert.equal(routes[0].routeId, 'no');
 });
 
 test('missing child age is reported as a profile validation error', () => {

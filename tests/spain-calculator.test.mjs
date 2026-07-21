@@ -122,6 +122,23 @@ test('Spanish highly-qualified route is preliminary until the offer and qualific
   assert.match(result.bestRoute.primarySource.url, /inclusion\.gob\.es/);
 });
 
+test('four Spanish routes explain their in-country filing rules', () => {
+  const result = calculate({ plannedBasis: 'REMOTE_EMPLOYEE', monthlyIncomeUsd: 5000 });
+  const guidance = Object.fromEntries(result.routes.map((route) => [route.routeId, route.applicationGuidance]));
+  assert.match(guidance.ES_DNV, /законно/);
+  assert.match(guidance.ES_ENTREPRENEUR, /UGE/);
+  assert.match(guidance.ES_HIGHLY_QUALIFIED, /работодатель/);
+  assert.match(guidance.ES_STUDENT, /только на высшее образование/);
+});
+
+test('practical budget falls back to available cities when requested size is missing', () => {
+  const profile = strictProfile();
+  profile.preferences.city_size = 'SMALL';
+  const result = calculateSpain(profile, data, context);
+  assert.ok(result.recommendedCity);
+  assert.equal(result.usedCitySizeFallback, true);
+});
+
 test('student route compares available means with the published IPREM requirement', () => {
   const enough = calculate({ plannedBasis: 'STUDY', monthlyIncomeUsd: 1000 }).routes.find((route) => route.routeId === 'ES_STUDENT');
   const low = calculate({ plannedBasis: 'STUDY', monthlyIncomeUsd: 500 }).routes.find((route) => route.routeId === 'ES_STUDENT');

@@ -209,3 +209,16 @@ export function describeResultIntro(routes, changed = false) {
     routeLabel: allUnsuitable ? 'Наиболее близкий вариант при изменении условий' : 'Лучший доступный вариант',
   };
 }
+
+const ROUTE_DISPLAY_RANK = Object.freeze({
+  SUITABLE: 0,
+  SUITABLE_WITH_CONDITIONS: 1,
+  PRELIMINARY_SUITABLE: 2,
+  INDIVIDUAL_REVIEW_REQUIRED: 3,
+  INSUFFICIENT_COUNTRY_DATA: 4,
+  UNSUITABLE: 5,
+});
+
+export function sortRoutesForDisplay(routes = []) {
+  return [...routes].sort((a, b) => (ROUTE_DISPLAY_RANK[a.routeStatus] ?? 99) - (ROUTE_DISPLAY_RANK[b.routeStatus] ?? 99));
+}
