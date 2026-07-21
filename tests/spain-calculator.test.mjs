@@ -105,10 +105,21 @@ test('NLV fails when passive resources are below the threshold', () => {
   assert.equal(result.bestRoute.routeStatus, 'UNSUITABLE');
 });
 
-test('Spanish job offer exposes the unresolved 2026 salary threshold', () => {
+test('Spanish highly-qualified route is preliminary until the offer and qualification are verified', () => {
   const result = calculate({ plannedBasis: 'SPANISH_JOB_OFFER', monthlyIncomeUsd: 5000 });
   assert.equal(result.bestRoute.routeId, 'ES_HIGHLY_QUALIFIED');
-  assert.equal(result.bestRoute.routeStatus, 'INSUFFICIENT_COUNTRY_DATA');
+  assert.equal(result.bestRoute.routeStatus, 'PRELIMINARY_SUITABLE');
+  assert.ok(result.bestRoute.actions.some((action) => action.includes('квалифицированной работы')));
+  assert.match(result.bestRoute.primarySource.url, /inclusion\.gob\.es/);
+});
+
+test('student route compares available means with the published IPREM requirement', () => {
+  const enough = calculate({ plannedBasis: 'STUDY', monthlyIncomeUsd: 1000 }).routes.find((route) => route.routeId === 'ES_STUDENT');
+  const low = calculate({ plannedBasis: 'STUDY', monthlyIncomeUsd: 500 }).routes.find((route) => route.routeId === 'ES_STUDENT');
+  assert.equal(enough.thresholdEur, 600);
+  assert.equal(enough.routeStatus, 'PRELIMINARY_SUITABLE');
+  assert.equal(low.routeStatus, 'UNSUITABLE');
+  assert.ok(low.actions.some((action) => action.includes('600 EUR')));
 });
 
 test('unknown multiple-citizenship rule does not invent a hard conflict', () => {

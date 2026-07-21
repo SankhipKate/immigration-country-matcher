@@ -184,6 +184,7 @@ export function collectEligibleFollowUps(calculation) {
 }
 
 export function describeIncomeRequirement(route, formatCurrency) {
+  if (route?.incomeGuidance) return route.incomeGuidance;
   if (route?.incomeTypeFit === 'DOES_NOT_MEET') {
     const acceptedByRoute = {
       ES_DNV: 'Подойдут удалённая работа по трудовому договору, договоры с иностранными заказчиками или доход владельца иностранной компании.',

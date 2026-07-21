@@ -6,6 +6,7 @@ const count = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
 
 export function routeSelectionKey(route) {
   return [
+    route.basisMissing ? 0 : 1,
     SELECTION_PREFERENCE_RANK[route.routeStatus] ?? 0,
     fit(route.goalFit), fit(route.applicationFit), fit(route.familyFit),
     fit(route.incomeTypeFit), fit(route.incomeFit),

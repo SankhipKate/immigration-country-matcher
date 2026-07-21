@@ -236,10 +236,12 @@ function routeCard(route, countryName, main = false) {
   const reasonsBlock = reasons.length ? `<div class="route-reasons"><h4>${reasons.length > 1 ? 'Почему не подходит — несколько независимых причин' : 'Почему не подходит'}</h4><ul>${reasons.map((item) => `<li>${html(item)}</li>`).join('')}</ul></div>` : '';
   const countryMissing = route.countryMissing || route.missing || [];
   const missingBlock = !unsuitable && countryMissing.length ? `<div class="route-open-items"><h4>Что ещё не подтверждено для этого варианта</h4><ul>${countryMissing.map((item) => `<li>${html(item)}</li>`).join('')}</ul></div>` : '';
-  const clientMissing = route.clientMissing || route.preliminary || [];
+  const clientMissing = (route.clientMissing || route.preliminary || []).filter((item) => !route.actions?.includes(item));
   const clientMissingBlock = !unsuitable && clientMissing.length ? `<div class="route-client-items"><h4>Что потребуется для этого маршрута</h4><ul>${clientMissing.map((item) => `<li>${html(item)}</li>`).join('')}</ul></div>` : '';
+  const actionsBlock = route.actions?.length ? `<div class="route-actions"><h4>Что сделать, чтобы маршрут подходил</h4><ol>${route.actions.map((item) => `<li>${html(item)}</li>`).join('')}</ol></div>` : '';
+  const sourceBlock = route.primarySource?.url ? `<p class="route-source"><a href="${html(route.primarySource.url)}" target="_blank" rel="noopener">Официальные требования: ${html(route.primarySource.title || route.routeName)}</a></p>` : '';
   const finance = incomeTypeBlocked || route.incomeTypeFit === 'NOT_APPLICABLE' ? '' : `<p class="financial-rule">${html(requirement)}</p>`;
-  return `<article class="route-result ${main ? 'best' : ''}"><div><span class="status-pill ${statusClass(route.routeStatus)}">${html(STATUS_LABELS_RU[route.routeStatus])}</span><h3>${html(route.routeName)}</h3><p>Расчёт выполнен для страны «${html(countryName)}» по гражданству РФ.</p></div>${finance}${reasonsBlock}${missingBlock}${clientMissingBlock}${unsuitable ? '' : longTermConditions(route)}</article>`;
+  return `<article class="route-result ${main ? 'best' : ''}"><div><span class="status-pill ${statusClass(route.routeStatus)}">${html(STATUS_LABELS_RU[route.routeStatus])}</span><h3>${html(route.routeName)}</h3></div>${finance}${reasonsBlock}${actionsBlock}${missingBlock}${clientMissingBlock}${sourceBlock}${unsuitable ? '' : longTermConditions(route)}</article>`;
 }
 
 function renderCountryResult(calculation, changed = false) {
