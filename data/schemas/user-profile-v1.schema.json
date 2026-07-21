@@ -417,6 +417,7 @@
           "description": "Страна источника может быть null для фриланса или самозанятости без единого иностранного заказчика."
         },
         "bank_country": { "$ref": "#/$defs/countryCode" },
+        "monthly_total": { "$ref": "#/$defs/money" },
         "monthly_provable": { "$ref": "#/$defs/money" },
         "evidence_level": { "enum": ["FULL", "PARTIAL", "NONE"] },
         "history_months": { "type": ["integer", "null"], "minimum": 0 },

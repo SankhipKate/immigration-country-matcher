@@ -8,6 +8,7 @@ const incomeSource = (prefix, owner, answers) => ({
   source_country: answers[`${prefix}Type`] === 'FREELANCE_OR_SELF_EMPLOYED'
     ? null : parseCountryCode(answers[`${prefix}SourceCountry`]),
   bank_country: parseCountryCode(answers[`${prefix}BankCountry`]),
+  monthly_total: money(answers[`${prefix}TotalAmount`] ?? answers[`${prefix}Amount`], answers[`${prefix}Currency`]),
   monthly_provable: money(answers[`${prefix}Amount`], answers[`${prefix}Currency`]),
   evidence_level: answers[`${prefix}Evidence`],
   history_months: null,
@@ -101,7 +102,8 @@ export function validateUserProfile(profile) {
     if (source?.source_country !== null && !code(source?.source_country)) add('primarySourceCountry', 'Укажите двухбуквенный код страны источника дохода.');
     if (source?.source_country === null && source?.type !== 'FREELANCE_OR_SELF_EMPLOYED') add('primarySourceCountry', 'Укажите страну источника дохода.');
     if (!code(source?.bank_country)) add('primaryBankCountry', 'Укажите двухбуквенный код страны банка.');
-    if (!positiveMoney(source?.monthly_provable) || source.monthly_provable.amount <= 0) add('primaryAmount', 'Укажите положительную подтверждаемую сумму и валюту.');
+    if (!positiveMoney(source?.monthly_total) || source.monthly_total.amount <= 0) add('primaryTotalAmount', 'Укажите положительную сумму регулярного дохода.');
+    if (!positiveMoney(source?.monthly_provable) || source.monthly_provable.amount < 0 || source.monthly_provable.amount > source.monthly_total.amount) add('primaryAmount', 'Подтверждаемая сумма должна быть от 0 до общего дохода.');
     if (!source?.evidence_level) add('primaryEvidence', 'Укажите полноту подтверждения дохода.');
   }
   if (!profile?.goal?.long_term) add('longTermGoal', 'Выберите долгосрочную цель.');
