@@ -82,7 +82,7 @@ function collectAnswers() {
     hasAdditionalIncome: checked('hasAdditionalIncome'), additionalType: value('additionalType'), additionalSourceCountry: value('additionalSourceCountry'), additionalBankCountry: value('additionalBankCountry'), additionalAmount: value('additionalAmount'), additionalCurrency: value('additionalCurrency'), additionalEvidence: value('additionalEvidence'),
     partnerHasIncome: checked('partnerHasIncome'), partnerType: value('partnerType'), partnerSourceCountry: value('partnerSourceCountry'), partnerBankCountry: value('partnerBankCountry'), partnerAmount: value('partnerAmount'), partnerCurrency: value('partnerCurrency'), partnerEvidence: value('partnerEvidence'),
     longTermGoal: value('longTermGoal'), physicalPresence: 'DEPENDS_ON_COUNTRY', languageExamReadiness: 'DEPENDS_ON_LANGUAGE', keepRuCitizenship: value('longTermGoal') === 'TEMPORARY_RESIDENCE_SUFFICIENT' ? 'NOT_IMPORTANT' : (radio('keepRuCitizenship') || 'NOT_IMPORTANT'),
-    budgetUnknown: checked('budgetUnknown'), monthlyBudget: value('monthlyBudget'), budgetCurrency: value('budgetCurrency'), citySize: value('citySize'), climates: checkboxValues('climate'),
+    budgetUnknown: checked('budgetUnknown'), monthlyBudget: value('monthlyBudget'), budgetCurrency: value('budgetCurrency'),
     petTypes: radio('hasPets') === 'NO' ? ['NONE'] : radio('petType') ? [radio('petType')] : [], dogBreedChoice: value('dogBreed'), dogBreed: value('dogBreed') === 'OTHER_KNOWN' ? value('dogBreedName') : value('dogBreed'), otherPetNotes: radio('petType') === 'CAT' ? `HYBRID_CAT:${radio('hybridCat') || 'UNKNOWN'}` : null,
     specialCircumstances: ['NONE'], medicalEnabled: false, specificMedicineRequired: false, regularCareRequired: false, medicalDetails: '',
     routeSpecificAnswers: currentProfile?.route_specific_answers || {},
@@ -172,8 +172,6 @@ function validateStep(step) {
   if (step === 4 && !value('longTermGoal')) error = fieldError(['longTermGoal'], 'Выберите долгосрочную цель.');
   else if (step === 4 && value('longTermGoal') !== 'TEMPORARY_RESIDENCE_SUFFICIENT' && !radio('keepRuCitizenship')) error = fieldError(['keepRuCitizenship'], 'Укажите, обязательно ли сохранить гражданство РФ.');
   if (step === 5 && !checked('budgetUnknown') && Number(value('monthlyBudget')) <= 0) error = fieldError(['monthlyBudget'], 'Укажите комфортный бюджет или выберите «Пока не знаю».');
-  else if (step === 5 && !value('citySize')) error = fieldError(['citySize'], 'Выберите подходящий размер города.');
-  else if (step === 5 && checkboxValues('climate').length === 0) error = fieldError(['climate'], 'Выберите хотя бы один вариант климата.');
   else if (step === 5 && radio('hasChildren') === 'YES' && !radio('schoolType')) error = fieldError(['schoolType'], 'Выберите планируемый тип школы или вариант «Не нужна».');
   else if (step === 5 && radio('hasChildren') === 'YES' && !radio('kindergartenNeeded')) error = fieldError(['kindergartenNeeded'], 'Ответьте, нужен ли детский сад.');
   const root = $('#formError');
@@ -250,7 +248,8 @@ function routeCard(route, countryName, main = false) {
 }
 
 function renderCountryResult(calculation, changed = false) {
-  const best = calculation.bestRoute;
+  const sortedRoutes = sortRoutesForDisplay(calculation.routes);
+  const best = sortedRoutes[0] || calculation.bestRoute;
   const children = calculation.profile.children?.length || 0;
   const family = `${calculation.profile.adults} ${calculation.profile.adults === 1 ? 'взрослый' : 'взрослых'}${children ? `, ${children} ${children === 1 ? 'ребёнок' : 'детей'}` : ''}`;
   const { heading: resultHeading, routeLabel } = describeResultIntro(calculation.routes, changed);
@@ -260,12 +259,20 @@ function renderCountryResult(calculation, changed = false) {
   const thresholdLabel = best?.incomeTypeFit === 'DOES_NOT_MEET' ? 'Финансовый порог' : 'Необходимый доход';
   const thresholdValue = best?.incomeTypeFit === 'DOES_NOT_MEET' ? 'Не оценивается: тип дохода не подходит' : best?.thresholdEur == null ? 'Нужен расчёт по документам' : currency(best.thresholdEur, 'EUR');
   const otherPetWarning = currentProfile?.pets?.types?.includes('OTHER') ? '<div class="route-open-items practical-warning"><h4>Нужна отдельная проверка животного</h4><p>У вас указано другое животное. Правила его ввоза зависят от конкретного вида и страны происхождения. Перед переездом потребуется отдельная проверка правил для этой страны.</p></div>' : '';
-  const sortedRoutes = sortRoutesForDisplay(calculation.routes);
-  const cityFallback = calculation.usedCitySizeFallback ? '<p class="result-note">Для выбранного размера города в пакете пока нет отдельной модели; показан ближайший доступный ориентир.</p>' : '';
+  const incomeAmount = countryId === 'ES' ? best?.incomeEur : best?.incomeUsd;
+  const incomeCurrency = countryId === 'ES' ? 'EUR' : 'USD';
+  const citySizeLabels = { LARGE: 'Крупный город', MEDIUM: 'Средний город', SMALL: 'Небольшой город' };
+  const cityBudgets = ['LARGE', 'MEDIUM', 'SMALL'].map((size) => calculation.cities.find((city) => city.populationCategory === size)).filter(Boolean);
+  const climateText = countryId === 'ES'
+    ? 'В среднем климат Испании тёплый и разнообразный: средиземноморский на большей части побережья, более прохладный и влажный на севере, континентальный во внутренних районах. Малага, Аликанте, Валенсия и Кастельон отличаются мягкой зимой и жарким летом; Канарские острова — субтропическим климатом.'
+    : countryId === 'UY'
+      ? 'В среднем климат Уругвая умеренный и влажный, с выраженными сезонами. На побережье и в Монтевидео мягче и ветренее; Сальто на северо-западе заметно жарче летом; Мальдонадо смягчается влиянием Атлантики.'
+      : 'Климат страны требует отдельного описания.';
   return `<details class="country-comparison"><summary class="country-result-banner" data-country-id="${html(countryId)}"><span class="country-flag" aria-hidden="true">${flag}</span><div class="country-summary-text"><small>Страна расчёта</small><h2>${html(countryName)}</h2><p>${routeLabel}: <b>${html(best?.routeName || 'не определён')}</b></p></div><span class="status-pill ${statusClass(best?.routeStatus)}">${html(STATUS_LABELS_RU[best?.routeStatus] || 'Требует проверки')}</span><span class="country-toggle" aria-hidden="true">⌄</span></summary><div class="country-comparison-body"><div class="result-head"><div><h2>${resultHeading}</h2><p>Все варианты ниже относятся только к стране «${html(countryName)}».</p></div></div>
-    <div class="kpi-grid three"><div class="kpi"><span>Состав семьи</span><b>${html(family)}</b></div><div class="kpi"><span>Подтверждаемый доход после пересчёта</span><b>${best?.incomeEur == null ? 'Не рассчитан' : currency(best.incomeEur, 'EUR')}</b></div><div class="kpi"><span>${thresholdLabel}</span><b>${thresholdValue}</b></div></div>${otherPetWarning}
+    <div class="kpi-grid three"><div class="kpi"><span>Состав семьи</span><b>${html(family)}</b></div><div class="kpi"><span>Подтверждаемый доход после пересчёта</span><b>${incomeAmount == null ? 'Не рассчитан' : currency(incomeAmount, incomeCurrency)}</b></div><div class="kpi"><span>${thresholdLabel}</span><b>${thresholdValue}</b></div></div>${otherPetWarning}
     <section><div class="section-title-row"><div><h3>Все проверенные варианты</h3><p>Сначала показаны подходящие, затем предварительно подходящие и требующие проверки, в конце — неподходящие.</p></div></div><div class="alternative-routes">${sortedRoutes.map((route) => routeCard(route, countryName, route.routeId === best?.routeId)).join('')}</div></section>
-    <section><div class="section-title-row"><div><h3>Практический семейный бюджет</h3><p>Обычные расходы семьи; школа учитывается отдельно, только если она нужна.</p></div></div>${calculation.recommendedCity ? `<div class="city-card recommended"><h4>${html(calculation.recommendedCity.cityName)}</h4><strong>${currency(calculation.recommendedCity.costUsd)}/мес</strong></div>${cityFallback}` : '<p>Для этой страны пока нет модели стоимости жизни.</p>'}</section>
+    <section><div class="section-title-row"><div><h3>Практический семейный бюджет</h3><p>Три ориентира для вашего состава семьи. Школа и детский сад в суммы не включены.</p></div></div>${cityBudgets.length ? `<div class="city-budget-grid">${cityBudgets.map((city) => `<div class="city-card"><small>${html(citySizeLabels[city.populationCategory])}</small><h4>${html(city.cityName)}</h4><strong>${currency(city.costUsd)}/мес</strong></div>`).join('')}</div>` : '<p>Для этой страны пока нет модели стоимости жизни.</p>'}</section>
+    <section><div class="section-title-row"><div><h3>Климат страны</h3></div></div><p>${html(climateText)}</p></section>
     <p class="result-note">Юридические правила маршрутов проверены по указанным источникам. Стоимость жизни — ориентировочная практическая оценка. Расчёт: ${html(calculation.calculatedAt?.slice(0, 10))}. Курс валют: ${html(calculationContext.fx.as_of?.slice(0, 10))}, источник ${html(calculationContext.fx.source)}. Результат предварительный и не является юридическим обещанием.</p></div></details>`;
 }
 
@@ -298,11 +305,10 @@ function restoreDraft() {
     const stored = JSON.parse(localStorage.getItem(DRAFT_KEY));
     if (stored?.version !== 1 || !stored.answers) return false;
     const a = stored.answers;
-    const simple = ['currentCountry','currentStatus','relationshipType','primaryType','primarySourceCountry','primaryBankCountry','primaryAmount','primaryCurrency','primaryEvidence','additionalType','additionalSourceCountry','additionalBankCountry','additionalAmount','additionalCurrency','additionalEvidence','partnerType','partnerSourceCountry','partnerBankCountry','partnerAmount','partnerCurrency','partnerEvidence','longTermGoal','monthlyBudget','budgetCurrency','citySize'];
+    const simple = ['currentCountry','currentStatus','relationshipType','primaryType','primarySourceCountry','primaryBankCountry','primaryAmount','primaryCurrency','primaryEvidence','additionalType','additionalSourceCountry','additionalBankCountry','additionalAmount','additionalCurrency','additionalEvidence','partnerType','partnerSourceCountry','partnerBankCountry','partnerAmount','partnerCurrency','partnerEvidence','longTermGoal','monthlyBudget','budgetCurrency'];
     simple.forEach((id) => { if ($(`#${id}`) && a[id] != null) $(`#${id}`).value = a[id]; });
     if (a.dogBreed) { $('#dogBreed').value = a.dogBreedChoice || (['MIXED', 'UNKNOWN'].includes(a.dogBreed) ? a.dogBreed : 'OTHER_KNOWN'); $('#dogBreedName').value = $('#dogBreed').value === 'OTHER_KNOWN' ? a.dogBreed : ''; }
     setRadio('inRussia', a.inRussia || parseCountryCode(a.currentCountry) === 'RU' ? 'YES' : 'NO'); setRadio('returnToRussia', a.returnToRussia ? 'YES' : 'NO'); setRadio('partnerIncluded', a.partnerIncluded ? 'YES' : 'NO'); setRadio('hasChildren', a.childAges?.length ? 'YES' : 'NO'); setRadio('hasPets', a.petTypes?.[0] && a.petTypes[0] !== 'NONE' ? 'YES' : 'NO'); setRadio('petType', a.petTypes?.[0]); setRadio('hybridCat', a.otherPetNotes?.startsWith('HYBRID_CAT:') ? a.otherPetNotes.split(':')[1] : ''); setRadio('keepRuCitizenship', a.keepRuCitizenship); setRadio('schoolType', a.schoolType); setRadio('kindergartenNeeded', a.kindergartenNeeded ? 'YES' : 'NO');
-    setCheckboxes('climate', a.climates || (a.climate ? [a.climate] : []));
     ['lgbtEnabled','hasAdditionalIncome','partnerHasIncome','budgetUnknown'].forEach((id) => { if ($(`#${id}`)) $(`#${id}`).checked = Boolean(a[id]); });
     $('#childrenCount').value = a.childAges?.length ? String(a.childAges.length) : ''; syncChildren(); $$('#childAges input').forEach((input, index) => { input.value = a.childAges[index] ?? ''; });
     currentProfile = a.routeSpecificAnswers ? { route_specific_answers: a.routeSpecificAnswers } : null;
@@ -317,11 +323,6 @@ $('#gateNo').addEventListener('click', () => { $('#gateNotice').hidden = false; 
 $('#nextStep').addEventListener('click', () => { if (validateStep(currentStep)) showStep(currentStep + 1); });
 $('#prevStep').addEventListener('click', () => showStep(currentStep - 1));
 $('#childrenCount').addEventListener('input', () => { syncChildren(); renderProfileSummary(profile()); });
-$$('input[name="climate"]').forEach((input) => input.addEventListener('change', () => {
-  const climates = $$('input[name="climate"]');
-  if (input.value === 'ANY' && input.checked) climates.forEach((item) => { if (item !== input) item.checked = false; });
-  else if (input.checked) climates.find((item) => item.value === 'ANY').checked = false;
-}));
 form.addEventListener('change', (event) => { if (event.target?.name === 'hasChildren') syncChildren(); syncConditional(); renderProfileSummary(profile()); });
 form.addEventListener('input', () => renderProfileSummary(profile()));
 form.addEventListener('submit', (event) => {
