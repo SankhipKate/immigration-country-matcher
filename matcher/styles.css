@@ -130,3 +130,24 @@
 .country-result-banner{align-items:center}
 .country-result-banner .country-summary-text{padding-top:0}
 @media(max-width:760px){.income-block .field>span:first-child{min-height:0}.income-block .field small{min-height:0}}
+
+/* v0.12.6 normalized select shape and country switch position */
+.field>select{
+  -webkit-appearance:none;
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%230b2445' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 14px center;
+  background-size:18px 18px;
+  padding-right:44px;
+}
+.money-combo select{
+  -webkit-appearance:none;
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%230b2445' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 12px center;
+  background-size:18px 18px;
+  padding-right:38px;
+}
+.country-workspace{scroll-margin-top:16px}
