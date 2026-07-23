@@ -2,8 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { buildUserProfile, describeIncomeRequirement, describeResultIntro, resolveProvableAmount, sortRoutesForDisplay, validateAgainstSchema, validateUserProfile } from '../matcher/profile.js';
-import { calculateSpain } from '../js/spain-calculator.js';
+import { calculateSpain, STATUS_LABELS_RU } from '../js/spain-calculator.js';
 import { countryOptions, parseCountryCode, searchCountries } from '../matcher/countries.js';
+import { DOG_BREEDS, isKnownDogBreed, searchDogBreeds } from '../matcher/dog-breeds.js';
 
 const profileSchema = JSON.parse(await readFile(new URL('../data/schemas/user-profile-v1.schema.json', import.meta.url), 'utf8'));
 const spainData = JSON.parse(await readFile(new URL('../data/spain-research-v2.2.json', import.meta.url), 'utf8'));
@@ -72,6 +73,20 @@ test('searchable country values are converted to ISO codes', () => {
 test('Russian prefix search ranks Philippines before Ethiopia', () => {
   assert.equal(searchCountries('фи')[0].code, 'PH');
   assert.equal(searchCountries('ph')[0].code, 'PH');
+});
+
+
+test('dog breed field uses a large searchable breed directory', () => {
+  assert.ok(DOG_BREEDS.length >= 200);
+  assert.equal(searchDogBreeds('в')[0], 'Веймаранер');
+  assert.ok(searchDogBreeds('корги').includes('Вельш-корги пемброк'));
+  assert.equal(isKnownDogBreed('Метис'), true);
+  assert.equal(isKnownDogBreed('Не знаю'), true);
+  assert.equal(isKnownDogBreed('Другая известная порода'), false);
+});
+
+test('individual review status has a concise user-facing label', () => {
+  assert.equal(STATUS_LABELS_RU.INDIVIDUAL_REVIEW_REQUIRED, 'Нужна проверка');
 });
 
 test('freelance income does not invent a source country', () => {
@@ -215,6 +230,9 @@ test('result UI shows city comparisons and a human-readable row-based LGBT secti
   assert.equal(app.includes('Ваш бюджет не указан'), false);
   assert.match(app, /budgetDerivedFromIncome/);
   assert.match(app, /data-country-tab/);
+  assert.equal(app.includes('Сравнение стран'), false);
+  assert.equal(app.includes('Страна расчёта'), false);
+  assert.match(styles, /\.country-tab \.status-pill\{grid-column:2/);
 });
 
 
@@ -243,7 +261,7 @@ test('income step uses total income plus a conditional partial amount field', as
 test('income controls align and share one control radius', async () => {
   const styles = await readFile(new URL('../matcher/styles.css', import.meta.url), 'utf8');
   assert.match(styles, /--control-radius:12px/);
-  assert.match(styles, /\.income-block \.field>span:first-child\{[^}]*min-height:40px/);
+  assert.match(styles, /\.income-block \.field>span:first-child\{[^}]*min-height:48px/);
   assert.match(styles, /\.field input,\.field select,\.field textarea\{border-radius:var\(--control-radius\)!important\}/);
   assert.match(styles, /\.money-combo\{[^}]*border-radius:var\(--control-radius\)/);
 });
@@ -253,16 +271,16 @@ test('matcher cache keys include the current release for code and country data',
     readFile(new URL('../matcher/index.html', import.meta.url), 'utf8'),
     readFile(new URL('../matcher/app.js', import.meta.url), 'utf8'),
   ]);
-  assert.match(matcher, /styles\.css\?v=0\.12\.4/);
-  assert.match(matcher, /app\.js\?v=0\.12\.4/);
-  assert.match(app, /uruguay-research-v2\.2\.json\?v=0\.12\.4/);
-  assert.match(app, /spain-adapter\.js\?v=0\.12\.4/);
+  assert.match(matcher, /styles\.css\?v=0\.12\.5/);
+  assert.match(matcher, /app\.js\?v=0\.12\.5/);
+  assert.match(app, /uruguay-research-v2\.2\.json\?v=0\.12\.5/);
+  assert.match(app, /spain-adapter\.js\?v=0\.12\.5/);
 });
 
 test('README describes the live matcher and maintenance rule', async () => {
   const readme = await readFile(new URL('../README.md', import.meta.url), 'utf8');
   assert.match(readme, /immigration-country-matcher\/matcher\//);
   assert.match(readme, /README обновляется при каждом изменении/);
-  assert.match(readme, /0\.12\.4/);
+  assert.match(readme, /0\.12\.5/);
   assert.equal(readme.includes('Рабочий пилот Испании'), false);
 });

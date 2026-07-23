@@ -1,7 +1,7 @@
-import { CalculationContextError } from '../engine/calculate-country.js?v=0.12.3';
-import { convertMoney } from '../engine/currency.js?v=0.12.3';
-import { ROUTE_STATUSES, STATUS_LABELS_RU, resolveStatusConflict } from '../engine/status-contract.js?v=0.12.3';
-import { INCOME_TYPE_BY_SCENARIO, ROUTE_RULES } from './spain-rules.js?v=0.12.3';
+import { CalculationContextError } from '../engine/calculate-country.js?v=0.12.5';
+import { convertMoney } from '../engine/currency.js?v=0.12.5';
+import { ROUTE_STATUSES, STATUS_LABELS_RU, resolveStatusConflict } from '../engine/status-contract.js?v=0.12.5';
+import { INCOME_TYPE_BY_SCENARIO, ROUTE_RULES } from './spain-rules.js?v=0.12.5';
 
 const outcome = (status, code, message, options = {}) => ({ status, code, message, condition: options.condition ?? null, field: options.field ?? null });
 const EU_EEA_SWISS = new Set(['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DE', 'DK', 'EE', 'FI', 'FR', 'GR', 'HU', 'IE', 'IS', 'IT', 'LI', 'LT', 'LU', 'LV', 'MT', 'NL', 'NO', 'PL', 'PT', 'RO', 'SE', 'SI', 'SK', 'CH']);

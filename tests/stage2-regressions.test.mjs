@@ -76,3 +76,30 @@ test('result view uses the full page width and keeps edit action in the hero', a
   assert.ok(app.includes("$('#editProfile').hidden = false"));
   assert.ok(app.includes("$('#editProfile').hidden = true"));
 });
+
+
+test('matcher selects avoid the obsolete not-selected option and align income blocks', async () => {
+  const [html, app, styles] = await Promise.all([
+    readFile(new URL('../matcher/index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../matcher/app.js', import.meta.url), 'utf8'),
+    readFile(new URL('../matcher/styles.css', import.meta.url), 'utf8'),
+  ]);
+  assert.equal(html.includes('Не выбрано'), false);
+  assert.equal(app.includes('Не выбрано'), false);
+  assert.ok(html.includes('disabled selected hidden>Выберите</option>'));
+  assert.match(html, /id="additionalIncomeBlock" class="conditional-card income-block"/);
+  assert.match(html, /id="partnerIncomeBlock" class="conditional-card income-block"/);
+  assert.match(styles, /\.income-block \.field>span:first-child[^{]*\{[^}]*min-height:48px/);
+});
+
+test('dog breed is a searchable input without a separate other-breed field', async () => {
+  const [html, app] = await Promise.all([
+    readFile(new URL('../matcher/index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../matcher/app.js', import.meta.url), 'utf8'),
+  ]);
+  assert.match(html, /id="dogBreed" type="text"/);
+  assert.equal(html.includes('Другая известная порода'), false);
+  assert.equal(html.includes('dogBreedName'), false);
+  assert.match(app, /enhanceDogBreedSearch/);
+  assert.match(app, /searchDogBreeds/);
+});

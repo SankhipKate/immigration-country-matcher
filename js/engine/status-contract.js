@@ -13,7 +13,7 @@ export const STATUS_LABELS_RU = Object.freeze({
   SUITABLE_WITH_CONDITIONS: 'Подходит с условиями',
   UNSUITABLE: 'Не подходит',
   INSUFFICIENT_COUNTRY_DATA: 'Есть неподтверждённые условия',
-  INDIVIDUAL_REVIEW_REQUIRED: 'Нужна индивидуальная проверка',
+  INDIVIDUAL_REVIEW_REQUIRED: 'Нужна проверка',
 });
 
 export const COUNTRY_GROUP_LABELS_RU = Object.freeze({
