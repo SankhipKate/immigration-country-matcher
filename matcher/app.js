@@ -1,9 +1,9 @@
-import { STATUS_LABELS_RU } from '../js/spain-calculator.js?v=0.12.3';
-import { calculateCountries } from '../js/engine/calculate-countries.js?v=0.12.3';
-import { spainAdapter } from '../js/countries/spain-adapter.js?v=0.12.3';
-import { loadCalculationContext } from '../pilot/fx-context.js?v=0.12.3';
-import { countryOptions, parseCountryCode, searchCountries } from './countries.js?v=0.12.3';
-import { buildUserProfile, describeIncomeRequirement, describeResultIntro, resolveProvableAmount, sortRoutesForDisplay, validateAgainstSchema, validateUserProfile } from './profile.js?v=0.12.3';
+import { STATUS_LABELS_RU } from '../js/spain-calculator.js?v=0.12.4';
+import { calculateCountries } from '../js/engine/calculate-countries.js?v=0.12.4';
+import { spainAdapter } from '../js/countries/spain-adapter.js?v=0.12.4';
+import { loadCalculationContext } from '../pilot/fx-context.js?v=0.12.4';
+import { countryOptions, parseCountryCode, searchCountries } from './countries.js?v=0.12.4';
+import { buildUserProfile, describeIncomeRequirement, describeResultIntro, resolveProvableAmount, sortRoutesForDisplay, validateAgainstSchema, validateUserProfile } from './profile.js?v=0.12.4';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -418,6 +418,7 @@ function switchToResult(calculation, changed = false) {
   $('#resultView').hidden = false;
   $('#heroTitle').textContent = 'Ваш результат';
   $('#heroSubtitle').textContent = 'По вашим ответам рассчитаны доступные варианты переезда и условия для семьи.';
+  $('#editProfile').hidden = false;
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -466,12 +467,12 @@ form.addEventListener('submit', (event) => {
 });
 $('#saveDraft').addEventListener('click', () => { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft())); showToast('Черновик сохранён в этом браузере'); });
 $('#clearDraft').addEventListener('click', clearAll);
-$('#editProfile').addEventListener('click', () => { $('#resultView').hidden = true; $('#questionnaireView').hidden = false; $('#heroTitle').textContent = 'Подберём вариант иммиграции'; showStep(1); });
+$('#editProfile').addEventListener('click', () => { $('#resultView').hidden = true; $('#questionnaireView').hidden = false; $('#heroTitle').textContent = 'Подберём вариант иммиграции'; $('#heroSubtitle').textContent = 'Ответьте на вопросы о вашей ситуации — анкета рассчитает доступные страны и программы.'; $('#editProfile').hidden = true; showStep(1); });
 
 async function init() {
   restoreDraft(); syncChildren(); syncConditional(); showStep(1, false);
   try {
-    const [spainResponse, uruguayResponse, schemaResponse] = await Promise.all([fetch('../data/spain-research-v2.2.json?v=0.12.3'), fetch('../data/uruguay-research-v2.2.json?v=0.12.3'), fetch('../data/schemas/user-profile-v1.schema.json?v=0.12.3')]);
+    const [spainResponse, uruguayResponse, schemaResponse] = await Promise.all([fetch('../data/spain-research-v2.2.json?v=0.12.4'), fetch('../data/uruguay-research-v2.2.json?v=0.12.4'), fetch('../data/schemas/user-profile-v1.schema.json?v=0.12.4')]);
     if (!spainResponse.ok || !uruguayResponse.ok || !schemaResponse.ok) throw new Error(`HTTP ${spainResponse.status}/${uruguayResponse.status}/${schemaResponse.status}`);
     [spainData, uruguayData, profileSchema] = await Promise.all([spainResponse.json(), uruguayResponse.json(), schemaResponse.json()]);
     calculationContext = await loadCalculationContext();

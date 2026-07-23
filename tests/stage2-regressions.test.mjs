@@ -65,3 +65,14 @@ test('public matcher gates the questionnaire behind Russian citizenship confirma
   assert.ok(app.includes("$('#gateNo').addEventListener('click'"));
   assert.equal(/дополнительн(?:ое|ые) гражданств/i.test(html), false);
 });
+
+
+test('result view uses the full page width and keeps edit action in the hero', async () => {
+  const html = await readFile(new URL('../matcher/index.html', import.meta.url), 'utf8');
+  const app = await readFile(new URL('../matcher/app.js', import.meta.url), 'utf8');
+  assert.match(html, /id="resultView" class="result-layout result-layout-single"/);
+  assert.ok(html.indexOf('id="editProfile"') < html.indexOf('id="resultView"'));
+  assert.equal(html.includes('Что дальше'), false);
+  assert.ok(app.includes("$('#editProfile').hidden = false"));
+  assert.ok(app.includes("$('#editProfile').hidden = true"));
+});
