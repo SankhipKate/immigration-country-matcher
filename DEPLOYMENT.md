@@ -1,37 +1,45 @@
-# Deployment status
+# Публикация проекта
 
-The implementation is complete and tested locally.
+## Публичная страница
 
-Target repository: `SankhipKate/immigration-country-matcher`
+Основной пользовательский интерфейс:
 
-Target public URL after the files are placed in `main`:
+- `https://sankhipkate.github.io/immigration-country-matcher/matcher/`
 
-`https://sankhipkate.github.io/immigration-country-matcher/pilot/`
+Корневой адрес проекта и прежний адрес `/pilot/` не содержат самостоятельных интерфейсов. Они автоматически перенаправляют пользователя на `/matcher/` и закрыты от индексации как отдельные страницы.
 
-## Files to add
+## Источник публикации
 
-- `.github/workflows/test.yml`
-- `data/research-package-v2.2.schema.json`
-- `data/spain-research-v2.2.json`
-- `js/spain-calculator.js`
-- `package.json`
-- `pilot/app.js`
-- `pilot/index.html`
-- `pilot/styles.css`
-- `tests/spain-calculator.test.mjs`
+GitHub Pages публикует содержимое ветки `main` из корня репозитория.
 
-## File to replace
+Рабочий процесс:
 
-- `README.md`
+1. изменения вносятся в отдельной ветке;
+2. запускаются автоматические тесты;
+3. создаётся pull request в `main`;
+4. после merge GitHub Pages публикует новую версию;
+5. проверяются `/matcher/`, корневой адрес и перенаправление `/pilot/`.
 
-## Verification completed
+## Текущая версия
 
-- `npm test`: 10/10 tests passed.
-- JavaScript syntax checks passed.
-- Spain JSON passed JSON Schema v2.2.
-- Pilot HTML parsed successfully.
-- Local HTTP requests for `/pilot/` and the Spain JSON returned HTTP 200.
+Версия интерфейса: **0.12.1**.
 
-## GitHub connector result
+Текущая публичная версия включает:
 
-The connected GitHub integration returned HTTP 403 `Resource not accessible by integration` for both branch creation and file creation. Repository write permission must be enabled for the integration before automated publication.
+- универсальную анкету;
+- сравнение Испании и Уругвая;
+- отдельный общий и подтверждаемый доход через понятный выбор «весь / часть / пока не могу подтвердить»;
+- проверку обязательных ответов на том шаге, где они запрашиваются;
+- построчное описание ЛГБТ-прав, семейной иммиграции, безопасности, международной защиты и текущих изменений;
+- единое оформление полей ввода.
+
+## Проверка перед merge
+
+```bash
+npm ci
+npm test
+find js matcher pilot -name '*.js' -print0 | xargs -0 -n1 node --check
+git diff --check
+```
+
+README и этот документ обновляются вместе с изменениями публичных адресов, версии или пользовательского поведения.

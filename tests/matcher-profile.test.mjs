@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { buildUserProfile, describeIncomeRequirement, describeResultIntro, sortRoutesForDisplay, validateAgainstSchema, validateUserProfile } from '../matcher/profile.js';
+import { buildUserProfile, describeIncomeRequirement, describeResultIntro, resolveProvableAmount, sortRoutesForDisplay, validateAgainstSchema, validateUserProfile } from '../matcher/profile.js';
 import { calculateSpain } from '../js/spain-calculator.js';
 import { countryOptions, parseCountryCode, searchCountries } from '../matcher/countries.js';
 
@@ -20,7 +20,7 @@ test('visible matcher version matches package version', async () => {
 const answers = (overrides = {}) => ({
   currentCountry: 'PH', currentStatus: 'TOURIST_OR_VISA_FREE', applicationMethods: ['ANY'],
   hasPartner: false, partnerIncluded: false, relationshipType: '', lgbtEnabled: false, childAges: [], schoolNeeded: false,
-  primaryType: 'REMOTE_EMPLOYMENT', primarySourceCountry: 'US', primaryBankCountry: 'GE', primaryAmount: '4000', primaryCurrency: 'USD', primaryEvidence: 'FULL',
+  primaryType: 'REMOTE_EMPLOYMENT', primarySourceCountry: 'US', primaryBankCountry: 'GE', primaryTotalAmount: '4000', primaryAmount: '4000', primaryCurrency: 'USD', primaryEvidence: 'FULL',
   hasAdditionalIncome: false, partnerHasIncome: false,
   longTermGoal: 'TEMPORARY_RESIDENCE_SUFFICIENT', physicalPresence: 'MOST_OF_YEAR', languageExamReadiness: '', keepRuCitizenship: 'REQUIRED',
   budgetUnknown: false, monthlyBudget: '2500', budgetCurrency: 'USD', citySize: 'ANY', climate: 'ANY', petTypes: ['NONE'],
@@ -88,7 +88,7 @@ test('user can select current-country and in-country application methods togethe
 });
 
 test('income and budget retain their own currencies', () => {
-  const profile = buildUserProfile(answers({ primaryAmount: '300000', primaryCurrency: 'RUB', monthlyBudget: '2200', budgetCurrency: 'EUR' }));
+  const profile = buildUserProfile(answers({ primaryTotalAmount: '300000', primaryAmount: '300000', primaryCurrency: 'RUB', monthlyBudget: '2200', budgetCurrency: 'EUR' }));
   assert.deepEqual(profile.income.primary.monthly_provable, { amount: 300000, currency: 'RUB' });
   assert.deepEqual(profile.preferences.monthly_budget, { amount: 2200, currency: 'EUR' });
 });
@@ -170,16 +170,20 @@ test('main matcher has no Spain-specific social-security question', async () => 
   assert.equal(source.includes('name="climate"'), false);
 });
 
-test('legacy pilot remains available beside the new matcher', async () => {
-  const [legacy, matcher] = await Promise.all([
+test('root and legacy pilot redirect to the public matcher and are not linked from it', async () => {
+  const [root, legacy, matcher] = await Promise.all([
+    readFile(new URL('../index.html', import.meta.url), 'utf8'),
     readFile(new URL('../pilot/index.html', import.meta.url), 'utf8'),
     readFile(new URL('../matcher/index.html', import.meta.url), 'utf8'),
   ]);
-  assert.ok(legacy.includes('id="profile-form"'));
+  assert.match(root, /location\.replace\('\.\/matcher\/'\)/);
+  assert.match(legacy, /location\.replace\('\.\.\/matcher\/'\)/);
   assert.ok(matcher.includes('id="matcherForm"'));
+  assert.equal(matcher.includes('href="../"'), false);
+  assert.equal(matcher.includes('href="../pilot/"'), false);
 });
 
-test('result UI shows role-based city budgets, temperature ranges, legal LGBT research, and a mobile toggle', async () => {
+test('result UI shows city comparisons and a human-readable row-based LGBT section', async () => {
   const [app, styles] = await Promise.all([
     readFile(new URL('../matcher/app.js', import.meta.url), 'utf8'),
     readFile(new URL('../matcher/styles.css', import.meta.url), 'utf8'),
@@ -189,9 +193,57 @@ test('result UI shows role-based city budgets, temperature ranges, legal LGBT re
   assert.match(app, /Самый дорогой/);
   assert.match(app, /Самый недорогой/);
   assert.match(app, /ЛГБТ: права, семья и иммиграция/);
+  assert.match(app, /Брак и переезд с супругом/);
+  assert.match(app, /Международная защита/);
+  assert.match(app, /Достаточно безопасно/);
+  assert.match(app, /Что меняется/);
+  assert.equal(app.includes('Дети и родительство'), false);
+  assert.equal(app.includes('Права транс-людей'), false);
+  assert.equal(app.includes('Отдельной «ЛГБТ-визы» нет'), false);
+  assert.equal(app.includes('Что не равно'), false);
+  assert.equal(styles.includes('.lgbt-grid'), false);
+  assert.match(styles, /\.lgbt-row\{display:grid/);
   assert.match(app, /средние дневные минимумы и максимумы/);
-  assert.equal(app.includes("'HATE_CRIME', 'PRACTICAL_SAFETY'"), true);
   assert.equal(app.includes('Для выбранного размера города в пакете пока нет отдельной модели'), false);
   assert.match(styles, /@media\(max-width:760px\)[\s\S]*\.country-toggle\{display:block/);
   assert.equal(styles.includes('.country-toggle{display:none}'), false);
+});
+
+
+test('income confirmation mode resolves one visible amount flow', () => {
+  assert.equal(resolveProvableAmount('4000', 'FULL', ''), 4000);
+  assert.equal(resolveProvableAmount('4000', 'PARTIAL', '2500'), 2500);
+  assert.equal(resolveProvableAmount('4000', 'PARTIAL', ''), null);
+  assert.equal(resolveProvableAmount('4000', 'NONE', '2500'), 0);
+  assert.equal(resolveProvableAmount('4000', '', '2500'), null);
+});
+
+test('income step uses total income plus a conditional partial amount field', async () => {
+  const [matcher, app] = await Promise.all([
+    readFile(new URL('../matcher/index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../matcher/app.js', import.meta.url), 'utf8'),
+  ]);
+  assert.match(matcher, /Какую часть дохода можете подтвердить документами\?/);
+  assert.match(matcher, /value="FULL">Весь доход/);
+  assert.match(matcher, /value="PARTIAL">Только часть/);
+  assert.match(matcher, /value="NONE">Пока не могу подтвердить/);
+  assert.match(matcher, /id="primaryAmountField"[^>]*hidden/);
+  assert.match(app, /partial\.trim\(\) === ''/);
+  assert.match(app, /Выберите, какую часть дохода можете подтвердить/);
+});
+
+test('income controls align and share one control radius', async () => {
+  const styles = await readFile(new URL('../matcher/styles.css', import.meta.url), 'utf8');
+  assert.match(styles, /--control-radius:12px/);
+  assert.match(styles, /\.income-block \.field>span:first-child\{[^}]*min-height:40px/);
+  assert.match(styles, /\.field input,\.field select,\.field textarea\{border-radius:var\(--control-radius\)!important\}/);
+  assert.match(styles, /\.money-combo\{[^}]*border-radius:var\(--control-radius\)/);
+});
+
+test('README describes the live matcher and maintenance rule', async () => {
+  const readme = await readFile(new URL('../README.md', import.meta.url), 'utf8');
+  assert.match(readme, /immigration-country-matcher\/matcher\//);
+  assert.match(readme, /README обновляется при каждом изменении/);
+  assert.match(readme, /0\.12\.1/);
+  assert.equal(readme.includes('Рабочий пилот Испании'), false);
 });
