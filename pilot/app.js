@@ -312,7 +312,7 @@ function renderResult(calculation) {
     PRELIMINARY_SUITABLE: 'Испания предварительно подходит',
     UNSUITABLE: 'Испания не подходит по текущим условиям',
     INSUFFICIENT_COUNTRY_DATA: 'Для точного результата пока недостаточно данных',
-    INDIVIDUAL_REVIEW_REQUIRED: 'Нужна индивидуальная проверка',
+    INDIVIDUAL_REVIEW_REQUIRED: 'Нужна проверка',
   };
   const resultTitle = resultTitles[status] || calculation.country.groupLabel;
   const resultSubtitle = isUnsuitable
