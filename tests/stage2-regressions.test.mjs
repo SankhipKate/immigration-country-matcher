@@ -114,8 +114,17 @@ test('selects match input shape and country tabs reset the detail position', asy
   assert.match(app, /scrollIntoView\(\{ block: 'start', behavior: 'smooth' \}\)/);
 });
 
-test('Spain result hides the non-informative generic continuity note', async () => {
-  const app = await readFile(new URL('../matcher/app.js', import.meta.url), 'utf8');
-  assert.match(app, /genericSpainContinuityNote/);
-  assert.match(app, /rule\.notes !== genericSpainContinuityNote/);
+test('long-term route text is structured once without duplicated research notes', async () => {
+  const [app, spain, uruguay] = await Promise.all([
+    readFile(new URL('../matcher/app.js', import.meta.url), 'utf8'),
+    readFile(new URL('../data/spain-research-v2.2.json', import.meta.url), 'utf8'),
+    readFile(new URL('../data/uruguay-research-v2.2.json', import.meta.url), 'utf8'),
+  ]);
+  assert.equal(app.includes('items.push(rule.notes)'), false);
+  assert.equal(app.includes('Срок до гражданства:'), false);
+  assert.match(app, /Гражданство: обычно после/);
+  assert.match(app, /Язык и экзамены: испанский/);
+  assert.match(app, /Выезды: отсутствие более 6 месяцев подряд/);
+  assert.equal(uruguay.includes('Требуется функциональный испанский'), false);
+  assert.equal(spain.includes('фиксированный универсальный числовой лимит отсутствий'), false);
 });

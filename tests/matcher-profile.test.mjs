@@ -222,7 +222,12 @@ test('result UI shows city comparisons and a human-readable row-based LGBT secti
   assert.equal(app.includes('Одна анкета независимо проверена'), false);
   assert.equal(app.includes('Все варианты ниже относятся только к стране'), false);
   assert.equal(app.includes('Школа: без платной международной школы'), false);
-  assert.match(app, /Срок до гражданства:/);
+  assert.equal(app.includes('Разрешение цифрового кочевника само по себе не гарантирует гражданство'), false);
+  assert.equal(app.includes('Требуется функциональный испанский'), false);
+  assert.equal(app.includes('items.push(rule.notes)'), false);
+  assert.match(app, /Гражданство: обычно после/);
+  assert.match(app, /Язык: нужно понимать испанский/);
+
   assert.equal(app.includes('Для выбранного размера города в пакете пока нет отдельной модели'), false);
   assert.match(styles, /\.country-workspace\{display:grid/);
   assert.match(styles, /\.country-tabs\{position:sticky/);
@@ -271,16 +276,16 @@ test('matcher cache keys include the current release for code and country data',
     readFile(new URL('../matcher/index.html', import.meta.url), 'utf8'),
     readFile(new URL('../matcher/app.js', import.meta.url), 'utf8'),
   ]);
-  assert.match(matcher, /styles\.css\?v=0\.12\.6/);
-  assert.match(matcher, /app\.js\?v=0\.12\.6/);
-  assert.match(app, /uruguay-research-v2\.2\.json\?v=0\.12\.6/);
-  assert.match(app, /spain-adapter\.js\?v=0\.12\.6/);
+  assert.match(matcher, /styles\.css\?v=0\.12\.7/);
+  assert.match(matcher, /app\.js\?v=0\.12\.7/);
+  assert.match(app, /uruguay-research-v2\.2\.json\?v=0\.12\.7/);
+  assert.match(app, /spain-adapter\.js\?v=0\.12\.7/);
 });
 
 test('README describes the live matcher and maintenance rule', async () => {
   const readme = await readFile(new URL('../README.md', import.meta.url), 'utf8');
   assert.match(readme, /immigration-country-matcher\/matcher\//);
   assert.match(readme, /README обновляется при каждом изменении/);
-  assert.match(readme, /0\.12\.6/);
+  assert.match(readme, /0\.12\.7/);
   assert.equal(readme.includes('Рабочий пилот Испании'), false);
 });
