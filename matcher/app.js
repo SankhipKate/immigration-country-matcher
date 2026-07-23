@@ -1,9 +1,9 @@
-import { STATUS_LABELS_RU } from '../js/spain-calculator.js';
-import { calculateCountries } from '../js/engine/calculate-countries.js';
-import { spainAdapter } from '../js/countries/spain-adapter.js';
-import { loadCalculationContext } from '../pilot/fx-context.js';
-import { countryOptions, parseCountryCode, searchCountries } from './countries.js';
-import { buildUserProfile, describeIncomeRequirement, describeResultIntro, resolveProvableAmount, sortRoutesForDisplay, validateAgainstSchema, validateUserProfile } from './profile.js';
+import { STATUS_LABELS_RU } from '../js/spain-calculator.js?v=0.12.3';
+import { calculateCountries } from '../js/engine/calculate-countries.js?v=0.12.3';
+import { spainAdapter } from '../js/countries/spain-adapter.js?v=0.12.3';
+import { loadCalculationContext } from '../pilot/fx-context.js?v=0.12.3';
+import { countryOptions, parseCountryCode, searchCountries } from './countries.js?v=0.12.3';
+import { buildUserProfile, describeIncomeRequirement, describeResultIntro, resolveProvableAmount, sortRoutesForDisplay, validateAgainstSchema, validateUserProfile } from './profile.js?v=0.12.3';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -247,7 +247,7 @@ function renderProfileSummary(p) {
     ['Гражданство', 'РФ'], ['Семья', familyLabel(p, true)],
     ['Доход', p.income.primary.monthly_provable?.amount ? `${p.income.primary.monthly_provable.amount} ${p.income.primary.monthly_provable.currency}/мес` : 'Не указан'],
     ['Цель', value('longTermGoal') ? $('#longTermGoal').selectedOptions[0].textContent : 'Не указана'],
-    ['Семейный бюджет', p.preferences.monthly_budget ? `${p.preferences.monthly_budget.amount} ${p.preferences.monthly_budget.currency}/мес` : checked('budgetUnknown') ? 'Пока не определён' : 'Не указан'],
+    ['Семейный бюджет', p.preferences.monthly_budget ? `${p.preferences.monthly_budget.amount} ${p.preferences.monthly_budget.currency}/мес` : checked('budgetUnknown') ? 'Автоматически равен общему доходу' : 'Не указан'],
   ];
   $('#profileSummary').innerHTML = rows.map(([label, val]) => `<div class="summary-row"><span>${html(label)}</span><b>${html(val)}</b></div>`).join('');
 }
@@ -299,7 +299,7 @@ function longTermConditions(route) {
     if (rule.residence_counted_for_citizenship === 'NO_AS_STAY_GENERAL_RULE') items.push('Срок до гражданства: период студенческого пребывания обычно не засчитывается как обычная резиденция; после перехода на засчитываемый статус действует общий срок 10 лет до подачи.');
     else items.push('Срок до гражданства: минимум 10 лет засчитываемого проживания до подачи; рассмотрение заявления занимает дополнительное время.');
   } else if (countryId === 'UY') {
-    const withFamily = Boolean(currentProfile?.family?.partner_included || currentProfile?.family?.children?.length);
+    const withFamily = route.routeId === 'UY_FAMILY_LINK' || Boolean(currentProfile?.family?.partner_included || currentProfile?.family?.children?.length);
     const years = withFamily ? 3 : 5;
     const countNote = route.routeId === 'UY_DIGITAL_NOMAD' || route.routeId === 'UY_TEMPORARY' ? ' Засчитывается ли весь срок именно по этому разрешению, нужно подтвердить перед долгосрочным планированием.' : '';
     items.push(`Срок до гражданства: обычно ${years} ${years === 3 ? 'года' : 'лет'} обычного проживания ${withFamily ? 'при семье, фактически живущей с вами в Уругвае' : 'без семьи, живущей с вами в Уругвае'}.${countNote}`);
@@ -331,17 +331,37 @@ function routeCard(route, countryName, main = false) {
   return `<article class="route-result ${main ? 'best' : ''}"><div><span class="status-pill ${statusClass(route.routeStatus)}">${html(STATUS_LABELS_RU[route.routeStatus])}</span><h3>${html(route.routeName)}</h3></div>${finance}${applicationBlock}${reasonsBlock}${actionsBlock}${permitRequirementsBlock}${missingBlock}${clientMissingBlock}${sourceBlock}${exampleSourceBlock}${longTermConditions(route)}</article>`;
 }
 
-function renderCountryResult(calculation, changed = false) {
+function countryPresentation(calculation) {
   const sortedRoutes = sortRoutesForDisplay(calculation.routes);
   const best = sortedRoutes[0] || calculation.bestRoute;
+  const countryId = calculation.country.countryId;
+  return {
+    sortedRoutes,
+    best,
+    countryId,
+    countryName: calculation.country.name,
+    flag: countryId === 'ES' ? '🇪🇸' : countryId === 'UY' ? '🇺🇾' : '🌍',
+  };
+}
+
+function renderCountryTab(calculation, active = false) {
+  const { best, countryId, countryName, flag } = countryPresentation(calculation);
+  return `<button class="country-tab${active ? ' is-active' : ''}" type="button" role="tab" data-country-tab="${html(countryId)}" aria-controls="country-panel-${html(countryId)}" aria-selected="${active}"><span class="country-tab-flag" aria-hidden="true">${flag}</span><span class="country-tab-copy"><strong>${html(countryName)}</strong><small>${html(best?.routeName || 'Маршрут не определён')}</small></span><span class="status-pill ${statusClass(best?.routeStatus)}">${html(STATUS_LABELS_RU[best?.routeStatus] || 'Требует проверки')}</span></button>`;
+}
+
+function renderCountryResult(calculation, changed = false, active = false) {
+  const { sortedRoutes, best, countryId, countryName, flag } = countryPresentation(calculation);
   const children = calculation.profile.children?.length || 0;
   const family = `${calculation.profile.adults} ${calculation.profile.adults === 1 ? 'взрослый' : 'взрослых'}${children ? `, ${children} ${children === 1 ? 'ребёнок' : 'детей'}` : ''}`;
-  const { heading: resultHeading, routeLabel } = describeResultIntro(calculation.routes, changed);
-  const countryName = calculation.country.name;
-  const countryId = calculation.country.countryId;
-  const flag = countryId === 'ES' ? '🇪🇸' : countryId === 'UY' ? '🇺🇾' : '🌍';
+  const { routeLabel } = describeResultIntro(calculation.routes, changed);
   const thresholdLabel = best?.incomeTypeFit === 'DOES_NOT_MEET' ? 'Финансовый порог' : 'Необходимый доход';
-  const thresholdValue = best?.incomeTypeFit === 'DOES_NOT_MEET' ? 'Не оценивается: тип дохода не подходит' : best?.thresholdEur == null ? 'Нужен расчёт по документам' : currency(best.thresholdEur, 'EUR');
+  const thresholdValue = best?.incomeTypeFit === 'DOES_NOT_MEET'
+    ? 'Не оценивается: тип дохода не подходит'
+    : best?.thresholdUsd != null
+      ? `больше ${currency(best.thresholdUsd, 'USD')}`
+      : best?.thresholdEur != null
+        ? currency(best.thresholdEur, 'EUR')
+        : 'Нужен расчёт по документам';
   const otherPetWarning = currentProfile?.pets?.types?.includes('OTHER') ? '<div class="route-open-items practical-warning"><h4>Нужна отдельная проверка животного</h4><p>У вас указано другое животное. Правила его ввоза зависят от конкретного вида и страны происхождения. Перед переездом потребуется отдельная проверка правил для этой страны.</p></div>' : '';
   const incomeAmount = countryId === 'ES' ? best?.incomeEur : best?.incomeUsd;
   const incomeCurrency = countryId === 'ES' ? 'EUR' : 'USD';
@@ -349,14 +369,29 @@ function renderCountryResult(calculation, changed = false) {
   const comparisonCities = CITY_COMPARISONS[countryId] || [];
   const familyFactor = 1 + Math.max(0, calculation.profile.adults - 1) * 0.6 + children * 0.4;
   const budgetUsd = calculation.profile.monthlyBudgetUsd;
+  const budgetSourceNote = calculation.profile.budgetDerivedFromIncome && budgetUsd != null
+    ? `<p class="budget-source-note">Бюджет не указан отдельно, поэтому для сравнения использован общий регулярный доход: <b>${currency(budgetUsd)}</b> в месяц.</p>`
+    : '';
   const educationCost = currentProfile?.family?.school_needed ? (countryId === 'ES' ? 900 : 700) : 0;
   const daycareNote = radio('kindergartenNeeded') === 'YES' ? 'Детский сад: цена зависит от города и возраста; пока показан отдельно как требующий проверки.' : '';
-  return `<details class="country-comparison"><summary class="country-result-banner" data-country-id="${html(countryId)}"><span class="country-flag" aria-hidden="true">${flag}</span><div class="country-summary-text"><small>Страна расчёта</small><h2>${html(countryName)}</h2><p>${routeLabel}: <b>${html(best?.routeName || 'не определён')}</b></p></div><span class="status-pill ${statusClass(best?.routeStatus)}">${html(STATUS_LABELS_RU[best?.routeStatus] || 'Требует проверки')}</span><span class="country-toggle" aria-hidden="true">⌄</span></summary><div class="country-comparison-body"><div class="result-head"><div><h2>${resultHeading}</h2></div></div>
+  const citySection = comparisonCities.length
+    ? `<div class="city-budget-grid climate-grid">${comparisonCities.map((city) => {
+        const living = Math.round(city.cost * familyFactor);
+        const total = living + educationCost;
+        const delta = budgetUsd == null ? null : budgetUsd - total;
+        const schoolLine = educationCost ? `<span>Международная школа: ориентир <b>+${currency(educationCost)}/мес</b></span>` : '';
+        const budgetLine = delta == null ? '' : delta >= 0
+          ? `<span class="budget-ok">В бюджет укладывается, запас ${currency(delta)}</span>`
+          : `<span class="budget-short">Не хватает примерно ${currency(Math.abs(delta))}</span>`;
+        return `<article class="city-card"><div class="city-role-list">${city.roles.map((role) => `<span>${html(role)}</span>`).join('')}</div><small>${html(citySizeLabels[city.size])}</small><h4>${html(city.name)}</h4><strong>${currency(living)}/мес на семью</strong>${schoolLine}${budgetLine}${city.cold ? `<span>Самый холодный месяц (${html(city.cold[0])}): <b>${city.cold[1]}…${city.cold[2]} °C</b></span>` : ''}${city.hot ? `<span>Самый жаркий месяц (${html(city.hot[0])}): <b>${city.hot[1]}…${city.hot[2]} °C</b></span>` : ''}</article>`;
+      }).join('')}</div>${daycareNote ? `<p class="research-caveat">${html(daycareNote)}</p>` : ''}<p class="research-caveat">Стоимость жизни — текущий сравнительный ориентир в USD. Она оценивает комфорт и не меняет юридическую пригодность ВНЖ.</p>`
+    : '<p>Для этой страны пока нет городской модели.</p>';
+  return `<article id="country-panel-${html(countryId)}" class="country-detail-panel" role="tabpanel" data-country-panel="${html(countryId)}"${active ? '' : ' hidden'}><div class="country-result-banner"><span class="country-flag" aria-hidden="true">${flag}</span><div class="country-summary-text"><small>Страна расчёта</small><h2>${html(countryName)}</h2><p>${routeLabel}: <b>${html(best?.routeName || 'не определён')}</b></p></div><span class="status-pill ${statusClass(best?.routeStatus)}">${html(STATUS_LABELS_RU[best?.routeStatus] || 'Требует проверки')}</span></div><div class="country-comparison-body">
     <div class="kpi-grid three"><div class="kpi"><span>Состав семьи</span><b>${html(family)}</b></div><div class="kpi"><span>Подтверждаемый доход после пересчёта</span><b>${incomeAmount == null ? 'Не рассчитан' : currency(incomeAmount, incomeCurrency)}</b></div><div class="kpi"><span>${thresholdLabel}</span><b>${thresholdValue}</b></div></div>${otherPetWarning}
     <section><div class="section-title-row"><div><h3>Все проверенные варианты</h3></div></div><div class="alternative-routes">${sortedRoutes.map((route) => routeCard(route, countryName, route.routeId === best?.routeId)).join('')}</div></section>
-    <section><div class="section-title-row"><div><h3>Города, климат и семейный бюджет</h3></div></div>${comparisonCities.length ? `<div class="city-budget-grid climate-grid">${comparisonCities.map((city) => { const living = Math.round(city.cost * familyFactor); const total = living + educationCost; const delta = budgetUsd == null ? null : budgetUsd - total; return `<article class="city-card"><div class="city-role-list">${city.roles.map((role) => `<span>${html(role)}</span>`).join('')}</div><small>${html(citySizeLabels[city.size])}</small><h4>${html(city.name)}</h4><strong>${currency(living)}/мес на семью</strong>${educationCost ? `<span>Международная школа: ориентир <b>+${currency(educationCost)}/мес</b></span>` : ''}${delta == null ? '<span>Ваш бюджет не указан</span>' : delta >= 0 ? `<span class="budget-ok">В бюджет укладывается, запас ${currency(delta)}</span>` : `<span class="budget-short">Не хватает примерно ${currency(Math.abs(delta))}</span>`}${city.cold ? `<span>Самый холодный месяц (${html(city.cold[0])}): <b>${city.cold[1]}…${city.cold[2]} °C</b></span>` : ''}${city.hot ? `<span>Самый жаркий месяц (${html(city.hot[0])}): <b>${city.hot[1]}…${city.hot[2]} °C</b></span>` : ''}</article>`; }).join('')}</div>${daycareNote ? `<p class="research-caveat">${html(daycareNote)}</p>` : ''}<p class="research-caveat">Стоимость жизни — текущий сравнительный ориентир в USD. Она оценивает комфорт и не меняет юридическую пригодность ВНЖ.</p>` : '<p>Для этой страны пока нет городской модели.</p>'}</section>
+    <section><div class="section-title-row"><div><h3>Города, климат и семейный бюджет</h3></div></div>${budgetSourceNote}${citySection}</section>
     ${renderLgbtResearch(calculation)}
-    <p class="result-note">Юридические правила маршрутов проверены по указанным источникам. Стоимость жизни — ориентировочная практическая оценка. Расчёт: ${html(calculation.calculatedAt?.slice(0, 10))}. Курс валют: ${html(calculationContext.fx.as_of?.slice(0, 10))}, источник ${html(calculationContext.fx.source)}. Результат предварительный и не является юридическим обещанием.</p></div></details>`;
+    <p class="result-note">Юридические правила маршрутов проверены по указанным источникам. Стоимость жизни — ориентировочная практическая оценка. Расчёт: ${html(calculation.calculatedAt?.slice(0, 10))}. Курс валют: ${html(calculationContext.fx.as_of?.slice(0, 10))}, источник ${html(calculationContext.fx.source)}. Результат предварительный и не является юридическим обещанием.</p></div></article>`;
 }
 
 function calculateAllCountries() {
@@ -364,7 +399,17 @@ function calculateAllCountries() {
 }
 
 function renderResult(calculation, changed = false) {
-  $('#result').innerHTML = `<div class="comparison-intro"><h2>Сравнение стран</h2></div>${calculation.results.map((country) => renderCountryResult(country, changed)).join('')}`;
+  const countries = calculation.results || [];
+  $('#result').innerHTML = `<div class="comparison-intro"><h2>Сравнение стран</h2></div><div class="country-workspace"><nav class="country-tabs" role="tablist" aria-label="Страны">${countries.map((country, index) => renderCountryTab(country, index === 0)).join('')}</nav><div class="country-detail-pane">${countries.map((country, index) => renderCountryResult(country, changed, index === 0)).join('')}</div></div>`;
+  const activateCountry = (countryId) => {
+    $$('[data-country-tab]', $('#result')).forEach((tab) => {
+      const active = tab.dataset.countryTab === countryId;
+      tab.classList.toggle('is-active', active);
+      tab.setAttribute('aria-selected', String(active));
+    });
+    $$('[data-country-panel]', $('#result')).forEach((panel) => { panel.hidden = panel.dataset.countryPanel !== countryId; });
+  };
+  $$('[data-country-tab]', $('#result')).forEach((tab) => tab.addEventListener('click', () => activateCountry(tab.dataset.countryTab)));
 }
 
 function switchToResult(calculation, changed = false) {
@@ -426,7 +471,7 @@ $('#editProfile').addEventListener('click', () => { $('#resultView').hidden = tr
 async function init() {
   restoreDraft(); syncChildren(); syncConditional(); showStep(1, false);
   try {
-    const [spainResponse, uruguayResponse, schemaResponse] = await Promise.all([fetch('../data/spain-research-v2.2.json'), fetch('../data/uruguay-research-v2.2.json'), fetch('../data/schemas/user-profile-v1.schema.json')]);
+    const [spainResponse, uruguayResponse, schemaResponse] = await Promise.all([fetch('../data/spain-research-v2.2.json?v=0.12.3'), fetch('../data/uruguay-research-v2.2.json?v=0.12.3'), fetch('../data/schemas/user-profile-v1.schema.json?v=0.12.3')]);
     if (!spainResponse.ok || !uruguayResponse.ok || !schemaResponse.ok) throw new Error(`HTTP ${spainResponse.status}/${uruguayResponse.status}/${schemaResponse.status}`);
     [spainData, uruguayData, profileSchema] = await Promise.all([spainResponse.json(), uruguayResponse.json(), schemaResponse.json()]);
     calculationContext = await loadCalculationContext();

@@ -218,10 +218,11 @@ test('legacy social-security answer does not override the route requirement', ()
   assert.deepEqual(result.bestRoute.followUpQuestions, []);
 });
 
-test('unknown budget is not converted to zero', () => {
+test('missing budget automatically uses regular monthly income', () => {
   const result = calculate({ plannedBasis: 'PASSIVE_INCOME', monthlyIncomeUsd: 5000, monthlyBudgetUsd: null });
-  assert.equal(result.profile.monthlyBudgetUsd, null);
-  assert.equal(result.recommendedCity.budgetProximity, 'NOT_APPLICABLE');
+  assert.equal(result.profile.monthlyBudgetUsd, 5000);
+  assert.equal(result.profile.budgetDerivedFromIncome, true);
+  assert.notEqual(result.recommendedCity.budgetProximity, 'NOT_APPLICABLE');
 });
 
 test('budget proximity uses the ten-percent margin', () => {

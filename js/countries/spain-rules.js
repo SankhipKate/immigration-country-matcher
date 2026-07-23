@@ -15,8 +15,8 @@ export const ROUTE_RULES = Object.freeze({
   ES_ENTREPRENEUR: { scenarios: ['INNOVATIVE_PROJECT'], separateBasis: 'Нужен инновационный предпринимательский проект, проходящий индивидуальную оценку.', individualReview: true },
   ES_HIGHLY_QUALIFIED: { scenarios: ['SPANISH_JOB_OFFER'], separateBasis: 'Найти предложение квалифицированной работы в Испании и подтвердить высшее образование либо требуемый профессиональный опыт.' },
   ES_STUDENT: { scenarios: ['STUDY'], separateBasis: 'Поступить на подходящую программу обучения.', fundsIncomeType: 'OTHER' },
-  UY_PERMANENT: { incomeTypes: ['EMPLOYEE', 'CONTRACTOR', 'COMPANY_OWNER', 'PASSIVE', 'BUSINESS_PLAN', 'OTHER'], scenarios: [], individualReview: true },
-  UY_TEMPORARY: { incomeTypes: ['EMPLOYEE', 'CONTRACTOR', 'COMPANY_OWNER', 'PASSIVE', 'BUSINESS_PLAN', 'OTHER'], scenarios: [], individualReview: true },
+  UY_PERMANENT: { incomeTypes: ['EMPLOYEE', 'CONTRACTOR', 'COMPANY_OWNER', 'PASSIVE', 'BUSINESS_PLAN', 'OTHER'], scenarios: [], fixedIncomeThresholdUsd: 650 },
+  UY_TEMPORARY: { incomeTypes: ['EMPLOYEE', 'CONTRACTOR', 'COMPANY_OWNER', 'PASSIVE', 'BUSINESS_PLAN', 'OTHER'], scenarios: [], separateBasis: 'Нужно подтвердить основание временного проживания: работу, учёбу или другую деятельность сроком более 180 дней.' },
   UY_DIGITAL_NOMAD: { incomeTypes: ['EMPLOYEE', 'CONTRACTOR', 'COMPANY_OWNER'], scenarios: ['REMOTE_EMPLOYEE', 'REMOTE_CONTRACTOR', 'FOREIGN_COMPANY_OWNER'], meansDeclaration: true },
   UY_FAMILY_LINK: { incomeTypes: [], scenarios: [], familyLinkFuture: true },
 });

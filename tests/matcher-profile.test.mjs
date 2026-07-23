@@ -209,8 +209,12 @@ test('result UI shows city comparisons and a human-readable row-based LGBT secti
   assert.equal(app.includes('Школа: без платной международной школы'), false);
   assert.match(app, /Срок до гражданства:/);
   assert.equal(app.includes('Для выбранного размера города в пакете пока нет отдельной модели'), false);
-  assert.match(styles, /@media\(max-width:760px\)[\s\S]*\.country-toggle\{display:block/);
-  assert.equal(styles.includes('.country-toggle{display:none}'), false);
+  assert.match(styles, /\.country-workspace\{display:grid/);
+  assert.match(styles, /\.country-tabs\{position:sticky/);
+  assert.match(styles, /@media\(max-width:900px\)[\s\S]*overflow-x:auto/);
+  assert.equal(app.includes('Ваш бюджет не указан'), false);
+  assert.match(app, /budgetDerivedFromIncome/);
+  assert.match(app, /data-country-tab/);
 });
 
 
@@ -244,10 +248,21 @@ test('income controls align and share one control radius', async () => {
   assert.match(styles, /\.money-combo\{[^}]*border-radius:var\(--control-radius\)/);
 });
 
+test('matcher cache keys include the current release for code and country data', async () => {
+  const [matcher, app] = await Promise.all([
+    readFile(new URL('../matcher/index.html', import.meta.url), 'utf8'),
+    readFile(new URL('../matcher/app.js', import.meta.url), 'utf8'),
+  ]);
+  assert.match(matcher, /styles\.css\?v=0\.12\.3/);
+  assert.match(matcher, /app\.js\?v=0\.12\.3/);
+  assert.match(app, /uruguay-research-v2\.2\.json\?v=0\.12\.3/);
+  assert.match(app, /spain-adapter\.js\?v=0\.12\.3/);
+});
+
 test('README describes the live matcher and maintenance rule', async () => {
   const readme = await readFile(new URL('../README.md', import.meta.url), 'utf8');
   assert.match(readme, /immigration-country-matcher\/matcher\//);
   assert.match(readme, /README обновляется при каждом изменении/);
-  assert.match(readme, /0\.12\.2/);
+  assert.match(readme, /0\.12\.3/);
   assert.equal(readme.includes('Рабочий пилот Испании'), false);
 });

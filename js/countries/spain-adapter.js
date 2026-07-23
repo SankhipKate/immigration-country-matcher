@@ -1,7 +1,7 @@
-import { CalculationContextError } from '../engine/calculate-country.js';
-import { convertMoney } from '../engine/currency.js';
-import { ROUTE_STATUSES, STATUS_LABELS_RU, resolveStatusConflict } from '../engine/status-contract.js';
-import { INCOME_TYPE_BY_SCENARIO, ROUTE_RULES } from './spain-rules.js';
+import { CalculationContextError } from '../engine/calculate-country.js?v=0.12.3';
+import { convertMoney } from '../engine/currency.js?v=0.12.3';
+import { ROUTE_STATUSES, STATUS_LABELS_RU, resolveStatusConflict } from '../engine/status-contract.js?v=0.12.3';
+import { INCOME_TYPE_BY_SCENARIO, ROUTE_RULES } from './spain-rules.js?v=0.12.3';
 
 const outcome = (status, code, message, options = {}) => ({ status, code, message, condition: options.condition ?? null, field: options.field ?? null });
 const EU_EEA_SWISS = new Set(['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DE', 'DK', 'EE', 'FI', 'FR', 'GR', 'HU', 'IE', 'IS', 'IT', 'LI', 'LT', 'LU', 'LV', 'MT', 'NL', 'NO', 'PL', 'PT', 'RO', 'SE', 'SI', 'SK', 'CH']);
@@ -11,8 +11,17 @@ const fits = (checks) => checks.some(({ status }) => status === ROUTE_STATUSES.U
 function normalizeProfile(profile = {}, context) {
   const family = profile.family || {};
   const primaryIncome = profile.income?.primary || {};
+  const additionalIncome = profile.income?.additional_sources || [];
+  const partnerIncome = profile.income?.partner?.sources || [];
+  const incomeSources = [primaryIncome, ...additionalIncome, ...partnerIncome];
   const budget = profile.preferences?.monthly_budget;
   const incomeConversion = convertMoney(primaryIncome.monthly_provable ?? null, 'USD', context, 'income.primary.monthly_provable');
+  const totalIncomeConversions = incomeSources
+    .map((source, index) => convertMoney(source?.monthly_total ?? source?.monthly_provable ?? null, 'USD', context, `income.total_sources[${index}]`))
+    .filter(Boolean);
+  const totalMonthlyIncomeUsd = totalIncomeConversions.length
+    ? totalIncomeConversions.reduce((sum, conversion) => sum + Number(conversion.convertedAmount || 0), 0)
+    : null;
   const budgetConversion = convertMoney(budget, 'USD', context, 'preferences.monthly_budget');
   return {
     citizenships: [...profile.citizenships],
@@ -21,6 +30,7 @@ function normalizeProfile(profile = {}, context) {
     currentStatus: profile.residence?.current_status ?? null,
     applicationMethods: profile.application_preferences?.methods ?? [],
     monthlyIncomeUsd: incomeConversion?.convertedAmount ?? null,
+    totalMonthlyIncomeUsd,
     incomeMoney: primaryIncome.monthly_provable ?? null,
     incomeConversion,
     incomeSourceCountry: primaryIncome.source_country ?? null,
@@ -35,9 +45,10 @@ function normalizeProfile(profile = {}, context) {
     physicalPresence: profile.goal?.physical_presence ?? null,
     languageReadiness: profile.goal?.language_exam_readiness ?? null,
     keepRuCitizenship: profile.goal?.keep_russian_citizenship ?? null,
-    monthlyBudgetUsd: budgetConversion?.convertedAmount ?? null,
+    monthlyBudgetUsd: budgetConversion?.convertedAmount ?? totalMonthlyIncomeUsd,
     budgetMoney: budget ?? null,
     budgetConversion,
+    budgetDerivedFromIncome: budget == null && totalMonthlyIncomeUsd != null,
     citySize: profile.preferences?.city_size ?? null,
     petTypes: profile.pets?.types ?? null,
     medicineRequired: Boolean(profile.optional_modules?.medical?.specific_medicine_required),
@@ -186,7 +197,23 @@ function incomeEvaluation(route, indexes, profile, context) {
     basisChecks = [outcome(basisSelected && rule.individualReview ? ROUTE_STATUSES.INDIVIDUAL_REVIEW_REQUIRED : ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'separate_route_basis_required', rule.separateBasis)];
     if (!rule.fundsIncomeType) return { ...base, checks: basisChecks, thresholdEur: null, incomeTypeFit: 'NOT_APPLICABLE', incomeFit: 'NOT_APPLICABLE', basisMissing: !basisSelected };
   }
-  if (!rule.fundsIncomeType && !rule.incomeTypes.includes(incomeType)) return { ...base, checks: [outcome(ROUTE_STATUSES.UNSUITABLE, 'income_type_incompatible', 'Тип дохода несовместим с правилами этого маршрута.')], thresholdEur: null, incomeTypeFit: 'DOES_NOT_MEET', incomeFit: 'NOT_APPLICABLE' };
+  if (!rule.fundsIncomeType && !rule.incomeTypes.includes(incomeType)) return { ...base, checks: [outcome(ROUTE_STATUSES.UNSUITABLE, 'income_type_incompatible', 'Тип дохода несовместим с правилами этого маршрута.')], thresholdEur: null, thresholdUsd: null, incomeTypeFit: 'DOES_NOT_MEET', incomeFit: 'NOT_APPLICABLE' };
+  if (rule.fixedIncomeThresholdUsd != null) {
+    const thresholdUsd = Number(rule.fixedIncomeThresholdUsd);
+    const checks = [...basisChecks];
+    if (profile.monthlyIncomeUsd == null) checks.push(outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'income_missing', 'Нужно указать подтверждаемый доход.', { field: 'income.primary.amount' }));
+    else if (profile.monthlyIncomeUsd <= thresholdUsd) checks.push(outcome(ROUTE_STATUSES.UNSUITABLE, 'income_below_fixed_usd_threshold', `Подтверждаемый доход должен быть больше ${thresholdUsd} USD в месяц. Сейчас после пересчёта — около ${Math.round(profile.monthlyIncomeUsd)} USD.`));
+    else checks.push(outcome(ROUTE_STATUSES.SUITABLE, 'income_above_fixed_usd_threshold', `Подтверждаемый доход превышает ${thresholdUsd} USD в месяц.`));
+    return {
+      ...base,
+      checks,
+      thresholdEur: null,
+      thresholdUsd,
+      incomeTypeFit: 'MEETS',
+      incomeFit: profile.monthlyIncomeUsd == null ? 'UNKNOWN' : profile.monthlyIncomeUsd > thresholdUsd ? 'MEETS' : 'DOES_NOT_MEET',
+      incomeGuidance: `Для расчёта этого маршрута используется порог: подтверждаемый доход должен быть больше ${thresholdUsd} USD в месяц.`,
+    };
+  }
   if (rule.individualReview) {
     const message = route.country_id === 'UY'
       ? 'Фиксированный минимальный доход не установлен: достаточность и документы о средствах оцениваются индивидуально.'
@@ -223,16 +250,34 @@ function incomeEvaluation(route, indexes, profile, context) {
 
 function familyChecks(route, indexes, profile) {
   if (profile.adults == null || profile.partnerIncluded == null || profile.children == null) return [outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'family_answer_missing', 'Нужно уточнить состав семьи.', { field: 'family' })];
+  if (route.route_id === 'UY_FAMILY_LINK') {
+    return [outcome(ROUTE_STATUSES.SUITABLE, 'family_link_evaluated_as_route_condition', 'Семейная связь с гражданином Уругвая оценивается как условие самого маршрута.')];
+  }
+  if (route.route_id === 'UY_DIGITAL_NOMAD' && (profile.partnerIncluded || profile.children.length > 0)) {
+    const dependants = profile.partnerIncluded && profile.children.length > 0
+      ? 'Партнёра и детей нельзя включить в это разрешение.'
+      : profile.partnerIncluded
+        ? 'Партнёра нельзя включить в это разрешение.'
+        : 'Детей нельзя включить в это разрешение.';
+    return [outcome(ROUTE_STATUSES.UNSUITABLE, 'digital_nomad_family_not_includable', `Разрешение цифрового кочевника оформляется только на основного заявителя. ${dependants} Для совместного переезда членам семьи потребуется собственное законное основание.`)];
+  }
   if (!profile.partnerIncluded && profile.children.length === 0) return [outcome(ROUTE_STATUSES.SUITABLE, 'no_dependants', 'Зависимые члены семьи отсутствуют.')];
   const rule = indexes.routeFamily.get(route.route_id);
   if (!rule) return [outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'family_rule_missing', 'Семейные правила не структурированы.')];
   const checks = [];
-  if (profile.partnerIncluded) checks.push(rule.partner_allowed === 'YES'
-    ? outcome(ROUTE_STATUSES.SUITABLE, 'partner_allowed', 'Партнёр может быть включён.')
-    : rule.partner_allowed === 'NO' ? outcome(ROUTE_STATUSES.UNSUITABLE, 'partner_not_allowed', 'Партнёр не может быть включён.')
-      : outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'partner_rule_unknown', 'Возможность включить партнёра не подтверждена.'));
-  if (profile.partnerIncluded && !profile.relationshipType) checks.push(outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'relationship_type_missing', 'Уточните тип отношений.', { field: 'family.relationship_type' }));
-  if (profile.partnerIncluded && profile.relationshipType) {
+  let partnerCanBeIncluded = true;
+  if (profile.partnerIncluded) {
+    if (rule.partner_allowed === 'YES') checks.push(outcome(ROUTE_STATUSES.SUITABLE, 'partner_allowed', 'Партнёр может быть включён.'));
+    else if (rule.partner_allowed === 'NO') {
+      partnerCanBeIncluded = false;
+      checks.push(outcome(ROUTE_STATUSES.UNSUITABLE, 'partner_not_allowed', 'Партнёра нельзя включить в этот маршрут.'));
+    } else {
+      partnerCanBeIncluded = false;
+      checks.push(outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'partner_rule_unknown', 'Возможность включить партнёра не подтверждена.'));
+    }
+  }
+  if (profile.partnerIncluded && partnerCanBeIncluded && !profile.relationshipType) checks.push(outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'relationship_type_missing', 'Уточните тип отношений.', { field: 'family.relationship_type' }));
+  if (profile.partnerIncluded && partnerCanBeIncluded && profile.relationshipType) {
     const accepted = Array.isArray(rule.accepted_relationship_types) && rule.accepted_relationship_types.includes(profile.relationshipType);
     const value = profile.relationshipType === 'UNREGISTERED_PARTNER'
       ? rule.unregistered_partner_allowed
@@ -244,7 +289,7 @@ function familyChecks(route, indexes, profile) {
       checks.push(outcome(ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS, 'unregistered_partner_evidence_required', rule.notes, { condition: rule.notes }));
     }
   }
-  if (profile.partnerIncluded && profile.lgbt?.enabled && profile.lgbt?.consent_for_personalization) {
+  if (profile.partnerIncluded && partnerCanBeIncluded && profile.lgbt?.enabled && profile.lgbt?.consent_for_personalization) {
     const field = profile.relationshipType === 'UNREGISTERED_PARTNER' ? 'same_sex_unregistered_partner_allowed' : 'same_sex_partner_allowed';
     checks.push(rule[field] === 'YES' ? outcome(ROUTE_STATUSES.SUITABLE, 'same_sex_family_recognized', 'Однополая семья признаётся.')
       : rule[field] === 'NO' ? outcome(ROUTE_STATUSES.UNSUITABLE, 'same_sex_family_not_recognized', 'Однополая семья не признаётся для этого маршрута.')
@@ -252,7 +297,7 @@ function familyChecks(route, indexes, profile) {
   }
   if (profile.children.length > 0) checks.push(rule.children_allowed === 'YES'
     ? outcome(ROUTE_STATUSES.SUITABLE, 'children_allowed', 'Дети могут быть включены.')
-    : rule.children_allowed === 'NO' ? outcome(ROUTE_STATUSES.UNSUITABLE, 'children_not_allowed', 'Дети не могут быть включены.')
+    : rule.children_allowed === 'NO' ? outcome(ROUTE_STATUSES.UNSUITABLE, 'children_not_allowed', 'Детей нельзя включить в этот маршрут.')
       : outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'children_rule_unknown', 'Возможность включить детей не подтверждена.'));
   if (rule.dependent_child_age_limit != null) for (const child of profile.children) {
     if (child.age_years == null) checks.push(outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'child_age_missing', 'Уточните возраст ребёнка.', { field: 'family.children.age_years' }));
@@ -272,7 +317,8 @@ function goalChecks(route, indexes, profile) {
   const label = citizenshipGoal ? 'гражданству' : 'ПМЖ';
   const hardRequired = ['PR_REQUIRED', 'CITIZENSHIP_REQUIRED'].includes(profile.goal);
   const checks = [];
-  if (rule[field] === 'YES') checks.push(outcome(ROUTE_STATUSES.SUITABLE, 'long_term_path', `Маршрут засчитывается в путь к ${label}.`));
+  if (['YES', 'DIRECT'].includes(rule[field])) checks.push(outcome(ROUTE_STATUSES.SUITABLE, 'long_term_path', `Маршрут засчитывается в путь к ${label}.`));
+  else if (rule[field] === 'CONDITIONAL' && route.country_id === 'UY') checks.push(outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'long_term_conditional', `Для пути к ${label} может потребоваться переход на другой статус проживания; это нужно подтвердить до долгосрочного планирования.`));
   else if (rule[field] === 'CONDITIONAL') checks.push(outcome(ROUTE_STATUSES.INDIVIDUAL_REVIEW_REQUIRED, 'long_term_conditional', `Путь к ${label} требует индивидуальной проверки.`));
   else if (hardRequired && rule[field] === 'NO') checks.push(outcome(ROUTE_STATUSES.UNSUITABLE, 'long_term_unavailable', `Подтверждённого пути к ${label} нет.`));
   else if (rule[field] === 'NO') checks.push(outcome(ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS, 'long_term_preference_unavailable', `Желаемый путь к ${label} не подтверждён, но первоначальный ВНЖ доступен.`, { condition: 'Учесть отсутствие подтверждённого долгосрочного пути.' }));
@@ -314,6 +360,7 @@ function evaluateRoute(route, indexes, profile, context) {
     current_country_residence_required: 'Подаваться из России либо получить подтверждённый резидентский статус в текущей стране.',
     in_country_method_not_allowed: 'Выбрать предусмотренную маршрутом подачу через консульство; если текущая страна не подходит — подаваться из России.',
     income_below_threshold: income.thresholdEur == null ? null : `Увеличить подтверждаемые средства минимум до ${Math.round(income.thresholdEur)} EUR в месяц.`,
+    income_below_fixed_usd_threshold: income.thresholdUsd == null ? null : `Увеличить подтверждаемый доход до суммы выше ${Math.round(income.thresholdUsd)} USD в месяц.`,
     dnv_foreign_income_source_required: 'Подтвердить основную работу или заказчиков за пределами Испании.',
     long_term_unavailable: 'Выбрать маршрут с подтверждённым путём к вашей долгосрочной цели либо изменить долгосрочную цель.',
     relationship_not_recognized: 'Оформить отношения в форме, которую признаёт этот маршрут, либо подаваться без включения партнёра.',
@@ -321,8 +368,8 @@ function evaluateRoute(route, indexes, profile, context) {
     language_required: 'Подтвердить готовность выполнить языковое требование для гражданства.',
     nationality_not_allowed: 'Выбрать маршрут, доступный гражданам РФ.',
   };
-  const actionFor = (check) => check.code === 'income_type_incompatible' ? incomeTypeAction[route.route_id]
-    : actionByCode[check.code] || `Устранить это препятствие: ${check.message}`;
+  const actionFor = (check) => check.code === 'income_type_incompatible' ? incomeTypeAction[route.route_id] || null
+    : actionByCode[check.code] || null;
   const blockerActions = checks.filter((check) => check.status === ROUTE_STATUSES.UNSUITABLE).map(actionFor);
   const enablingActions = checks.filter((check) => check.code === 'separate_route_basis_required').map((check) => check.message);
   const actions = [...blockerActions, ...enablingActions].filter(Boolean);
@@ -340,7 +387,7 @@ function evaluateRoute(route, indexes, profile, context) {
   }[route.route_id] || null;
   return {
     routeId: route.route_id, routeName: route.name_ru || route.official_name, routeStatus, statusLabel: STATUS_LABELS_RU[routeStatus],
-    applicationNationality: profile.applicationNationality, viaSecondaryNationality: profile.applicationNationality !== 'RU', thresholdEur: income.thresholdEur, incomeEur: income.incomeEur,
+    applicationNationality: profile.applicationNationality, viaSecondaryNationality: profile.applicationNationality !== 'RU', thresholdEur: income.thresholdEur, thresholdUsd: income.thresholdUsd ?? null, incomeEur: income.incomeEur,
     incomeUsd: profile.monthlyIncomeUsd,
     incomeOriginal: profile.incomeMoney, incomeConversion: profile.incomeConversion, incomeRequirementConversion: income.requirementConversion, basisMissing: Boolean(income.basisMissing),
     goalFit: fits(goal), applicationFit: fits(application), familyFit: fits(family), incomeTypeFit: income.incomeTypeFit, incomeFit: income.incomeFit,
