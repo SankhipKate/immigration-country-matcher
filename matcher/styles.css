@@ -1,3 +1,4 @@
+:root{--control-radius:12px}
 .matcher-layout{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:20px;align-items:start}
 .two-choice{grid-template-columns:repeat(2,minmax(0,1fr))}
 .segmented:has(input[name="partnerIncluded"]),.segmented:has(input[name="hasPartner"]){grid-template-columns:repeat(2,1fr);max-width:520px}
@@ -10,8 +11,11 @@
 .info-box p{margin:6px 0 0;line-height:1.55}
 .standalone-toggle{margin:20px 0}
 .field small{display:block;margin-top:7px;color:var(--muted);font-size:14px;line-height:1.45}
+.field input,.field select,.field textarea{border-radius:var(--control-radius)!important}
+.income-block .field>span:first-child{display:flex;align-items:flex-start;min-height:40px}
+.income-partial-field[hidden]{display:none!important}
 .field{position:relative}
-.country-search-results{position:absolute;z-index:20;top:100%;left:0;right:0;margin-top:5px;padding:6px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 14px 34px rgba(21,34,50,.14);max-height:280px;overflow:auto}
+.country-search-results{position:absolute;z-index:20;top:100%;left:0;right:0;margin-top:5px;padding:6px;background:#fff;border:1px solid var(--line);border-radius:var(--control-radius);box-shadow:0 14px 34px rgba(21,34,50,.14);max-height:280px;overflow:auto}
 .country-search-results button{display:block;width:100%;padding:10px 12px;border:0;border-radius:8px;background:transparent;color:var(--ink);font:inherit;text-align:left;cursor:pointer}
 .country-search-results button:hover,.country-search-results button:focus{background:var(--soft)}
 .route-actions{margin-top:16px;padding:16px 18px;border:1px solid #b8d7c5;border-radius:14px;background:#f2fbf6}
@@ -24,12 +28,12 @@
 .version-footer{margin:28px 0 8px;text-align:center;color:var(--muted);font:600 13px/1.4 Arial,"Helvetica Neue",sans-serif;letter-spacing:.02em}
 .income-block{margin-bottom:16px;padding:18px;border:1px solid var(--line);border-radius:16px;background:#f9fbfd}
 .income-block h3,.conditional-card h3{margin:0 0 14px;font-size:17px}
-.money-combo{display:grid;grid-template-columns:1fr 92px;border:1px solid var(--line-strong);border-radius:12px;overflow:hidden;background:#fff}
+.money-combo{display:grid;grid-template-columns:1fr 92px;border:1px solid var(--line-strong);border-radius:var(--control-radius);overflow:hidden;background:#fff}
 .money-combo input,.money-combo select{border:0!important;border-radius:0!important;box-shadow:none!important}
 .money-combo select{border-left:1px solid var(--line)!important}
 .income-block .field-grid{align-items:start}.money-combo{height:48px}.money-combo-fixed-currency{grid-template-columns:1fr 132px}.money-combo-fixed-currency>span{display:flex;align-items:center;padding:0 12px;border-left:1px solid var(--line);color:var(--muted);font-size:13px}.budget-entry{display:grid;gap:12px;max-width:650px}.compact-toggle{padding:11px 14px;min-height:0}
 .city-role-list{display:flex;flex-wrap:wrap;gap:6px}.city-role-list span{padding:4px 8px;border-radius:999px;background:#eaf2ff;color:#174f9b;font-size:12px;font-weight:700}.budget-ok{color:#137333}.budget-short{color:#a53a2a}
-.field textarea{width:100%;min-height:100px;padding:12px 14px;border:1px solid var(--line-strong);border-radius:12px;resize:vertical}
+.field textarea{width:100%;min-height:100px;padding:12px 14px;border:1px solid var(--line-strong);border-radius:var(--control-radius);resize:vertical}
 .route-result{margin-top:14px;padding:18px;border:1px solid var(--line);border-radius:15px;background:#fff}
 .route-result.best{border-color:var(--blue-600);background:#f7fbff}
 .route-result h3{margin:9px 0 3px}
@@ -61,10 +65,13 @@
 .climate-grid .city-card span{display:block;margin-top:7px;color:#46596e}
 .climate-grid .city-card a{display:inline-block;margin-top:10px;color:var(--navy);font-weight:700;text-underline-offset:3px}
 .lgbt-research{padding:20px;border:1px solid #cabbea;border-radius:16px;background:#fbf9ff}
-.lgbt-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-.research-card{padding:16px;border:1px solid #ded5ef;border-radius:13px;background:#fff}
-.research-card h4{margin:0 0 7px}.research-card p{margin:0 0 10px;color:#46596e;line-height:1.55}
-.research-card a{color:var(--navy);font-weight:700;text-underline-offset:3px}.research-gap{color:var(--red-600);font-weight:700}
+.lgbt-list{overflow:hidden;border:1px solid #ded5ef;border-radius:var(--control-radius);background:#fff}
+.lgbt-row{display:grid;grid-template-columns:minmax(190px,30%) minmax(0,1fr);gap:20px;padding:15px 16px;border-top:1px solid #eee8f6;align-items:start}
+.lgbt-row:first-child{border-top:0}
+.lgbt-row h4{margin:0;font-size:15px;line-height:1.45}.lgbt-row p{margin:0;color:#46596e;line-height:1.55}
+.lgbt-row>div p{margin-top:8px}
+.lgbt-safety{display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;font-size:13px;font-weight:850}
+.lgbt-safety.safe{background:#e8f5ec;color:#17613b}.lgbt-safety.medium{background:#fff3d8;color:#7b5510}.lgbt-safety.unsafe{background:#fde9ed;color:#8b2638}
 .research-caveat{margin:14px 0 0;padding:12px;border-radius:10px;background:#f1ecfb;color:#493d61;line-height:1.5}
 .route-reasons{margin-top:14px;padding:14px;border:1px solid #ecc5cc;border-radius:12px;background:#fff7f8}
 .route-reasons h4{margin:0 0 8px;color:var(--red-600)}
@@ -80,5 +87,5 @@
 .country-comparison-body{padding:22px}
 .country-comparison-body>section{margin-top:22px}
 @media(max-width:1100px){.matcher-layout{grid-template-columns:1fr}}
-@media(max-width:760px){.matcher-layout{display:block}.two-choice,.segmented.four{grid-template-columns:1fr 1fr}.eligibility-gate{padding:20px}.income-block{padding:14px}.route-result,.country-comparison-body{padding:15px}.country-result-banner{align-items:flex-start;flex-wrap:wrap;padding:15px}.country-result-banner .status-pill{margin-left:auto}.country-toggle{display:block;margin-left:auto;font-size:28px;line-height:1}.city-budget-grid,.lgbt-grid{grid-template-columns:1fr}.lgbt-research{padding:15px}}
+@media(max-width:760px){.matcher-layout{display:block}.two-choice,.segmented.four{grid-template-columns:1fr 1fr}.eligibility-gate{padding:20px}.income-block{padding:14px}.route-result,.country-comparison-body{padding:15px}.country-result-banner{align-items:flex-start;flex-wrap:wrap;padding:15px}.country-result-banner .status-pill{margin-left:auto}.country-toggle{display:block;margin-left:auto;font-size:28px;line-height:1}.city-budget-grid{grid-template-columns:1fr}.lgbt-row{grid-template-columns:1fr;gap:7px}.lgbt-research{padding:15px}}
 @media(max-width:430px){.two-choice,.segmented.four{grid-template-columns:1fr}.money-combo{grid-template-columns:minmax(0,1fr) 82px}}

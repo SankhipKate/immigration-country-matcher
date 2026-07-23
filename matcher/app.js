@@ -3,14 +3,14 @@ import { calculateCountries } from '../js/engine/calculate-countries.js';
 import { spainAdapter } from '../js/countries/spain-adapter.js';
 import { loadCalculationContext } from '../pilot/fx-context.js';
 import { countryOptions, parseCountryCode, searchCountries } from './countries.js';
-import { buildUserProfile, describeIncomeRequirement, describeResultIntro, sortRoutesForDisplay, validateAgainstSchema, validateUserProfile } from './profile.js';
+import { buildUserProfile, describeIncomeRequirement, describeResultIntro, resolveProvableAmount, sortRoutesForDisplay, validateAgainstSchema, validateUserProfile } from './profile.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
 const form = $('#matcherForm');
 const steps = $$('.wizard-step');
 const TOTAL_STEPS = steps.length;
-const DRAFT_KEY = 'immigration-matcher-universal-draft-v1';
+const DRAFT_KEY = 'immigration-matcher-universal-draft-v2';
 let currentStep = 1;
 let spainData;
 let uruguayData;
@@ -45,8 +45,8 @@ const INCOME_FIELDS = (prefix, title) => `<h3>${title}</h3><div class="field-gri
   <label id="${prefix}SourceCountryField" class="field"><span>Страна работодателя или источника</span><input id="${prefix}SourceCountry" list="countryOptions" placeholder="Начните вводить название"><small>Для фриланса без одного постоянного заказчика можно не указывать.</small></label>
   <label class="field"><span>Страна банка</span><input id="${prefix}BankCountry" list="countryOptions" placeholder="Начните вводить название"><small>Используется для проверки пригодности выписок, а не для выбора маршрута.</small></label>
   <label class="field"><span>Ваш регулярный доход в месяц</span><div class="money-combo"><input id="${prefix}TotalAmount" type="number" min="0"><select id="${prefix}Currency"><option>USD</option><option>EUR</option><option>RUB</option></select></div></label>
-  <label class="field"><span>Из него можете подтвердить документами</span><div class="money-combo money-combo-fixed-currency"><input id="${prefix}Amount" type="number" min="0"><span>в той же валюте</span></div><small>Эта сумма сравнивается с порогом маршрута.</small></label>
-  <label class="field"><span>Как подтвердите эту сумму?</span><select id="${prefix}Evidence"><option value="">Не выбрано</option><option value="FULL">Договор и движение денег</option><option value="PARTIAL">Только часть документов</option><option value="NONE">Пока не могу подтвердить</option></select></label>
+  <label class="field"><span>Какую часть дохода можете подтвердить документами?</span><select id="${prefix}Evidence"><option value="">Не выбрано</option><option value="FULL">Весь доход</option><option value="PARTIAL">Только часть</option><option value="NONE">Пока не могу подтвердить</option></select><small>Подтверждаемая сумма сравнивается с финансовым порогом программы.</small></label>
+  <label id="${prefix}AmountField" class="field income-partial-field" hidden><span>Какую сумму сможете подтвердить?</span><div class="money-combo money-combo-fixed-currency"><input id="${prefix}Amount" type="number" min="0"><span>в той же валюте</span></div></label>
 </div>`;
 
 $('#additionalIncomeBlock').innerHTML = INCOME_FIELDS('additional', 'Дополнительный доход заявителя');
@@ -85,6 +85,12 @@ function enhanceCountrySearch(input) {
 
 $$('input[list="countryOptions"]').forEach(enhanceCountrySearch);
 
+const resolvedIncomeAmount = (prefix) => resolveProvableAmount(
+  value(`${prefix}TotalAmount`),
+  value(`${prefix}Evidence`),
+  value(`${prefix}Amount`),
+);
+
 function collectAnswers() {
   const childAges = $$('#childAges input').map((input) => input.value);
   const inRussia = radio('inRussia') === 'YES';
@@ -94,9 +100,9 @@ function collectAnswers() {
     inRussia, returnToRussia: returning, currentCountry: inRussia ? 'RU' : value('currentCountry'), currentStatus: inRussia ? 'CITIZENSHIP' : value('currentStatus'), applicationMethods,
     hasPartner: radio('partnerIncluded') === 'YES', partnerIncluded: radio('partnerIncluded') === 'YES', relationshipType: value('relationshipType'), lgbtEnabled: checked('lgbtEnabled'),
     childAges: radio('hasChildren') === 'YES' ? childAges : [], schoolNeeded: radio('schoolType') === 'INTERNATIONAL', schoolType: radio('schoolType'), kindergartenNeeded: radio('kindergartenNeeded') === 'YES',
-    primaryType: value('primaryType'), primarySourceCountry: value('primarySourceCountry'), primaryBankCountry: value('primaryBankCountry'), primaryTotalAmount: value('primaryTotalAmount'), primaryAmount: value('primaryAmount'), primaryCurrency: value('primaryCurrency'), primaryEvidence: value('primaryEvidence'),
-    hasAdditionalIncome: checked('hasAdditionalIncome'), additionalType: value('additionalType'), additionalSourceCountry: value('additionalSourceCountry'), additionalBankCountry: value('additionalBankCountry'), additionalTotalAmount: value('additionalTotalAmount'), additionalAmount: value('additionalAmount'), additionalCurrency: value('additionalCurrency'), additionalEvidence: value('additionalEvidence'),
-    partnerHasIncome: checked('partnerHasIncome'), partnerType: value('partnerType'), partnerSourceCountry: value('partnerSourceCountry'), partnerBankCountry: value('partnerBankCountry'), partnerTotalAmount: value('partnerTotalAmount'), partnerAmount: value('partnerAmount'), partnerCurrency: value('partnerCurrency'), partnerEvidence: value('partnerEvidence'),
+    primaryType: value('primaryType'), primarySourceCountry: value('primarySourceCountry'), primaryBankCountry: value('primaryBankCountry'), primaryTotalAmount: value('primaryTotalAmount'), primaryAmount: resolvedIncomeAmount('primary'), primaryCurrency: value('primaryCurrency'), primaryEvidence: value('primaryEvidence'),
+    hasAdditionalIncome: checked('hasAdditionalIncome'), additionalType: value('additionalType'), additionalSourceCountry: value('additionalSourceCountry'), additionalBankCountry: value('additionalBankCountry'), additionalTotalAmount: value('additionalTotalAmount'), additionalAmount: resolvedIncomeAmount('additional'), additionalCurrency: value('additionalCurrency'), additionalEvidence: value('additionalEvidence'),
+    partnerHasIncome: checked('partnerHasIncome'), partnerType: value('partnerType'), partnerSourceCountry: value('partnerSourceCountry'), partnerBankCountry: value('partnerBankCountry'), partnerTotalAmount: value('partnerTotalAmount'), partnerAmount: resolvedIncomeAmount('partner'), partnerCurrency: value('partnerCurrency'), partnerEvidence: value('partnerEvidence'),
     longTermGoal: value('longTermGoal'), physicalPresence: 'DEPENDS_ON_COUNTRY', languageExamReadiness: 'DEPENDS_ON_LANGUAGE', keepRuCitizenship: value('longTermGoal') === 'TEMPORARY_RESIDENCE_SUFFICIENT' ? 'NOT_IMPORTANT' : (radio('keepRuCitizenship') || 'NOT_IMPORTANT'),
     budgetUnknown: checked('budgetUnknown'), monthlyBudget: value('monthlyBudget'), budgetCurrency: value('budgetCurrency'),
     petTypes: radio('hasPets') === 'NO' ? ['NONE'] : radio('petType') ? [radio('petType')] : [], dogBreedChoice: value('dogBreed'), dogBreed: value('dogBreed') === 'OTHER_KNOWN' ? value('dogBreedName') : value('dogBreed'), otherPetNotes: radio('petType') === 'CAT' ? `HYBRID_CAT:${radio('hybridCat') || 'UNKNOWN'}` : null,
@@ -135,6 +141,11 @@ function syncConditional() {
     const freelance = value(`${prefix}Type`) === 'FREELANCE_OR_SELF_EMPLOYED';
     const sourceField = $(`#${prefix}SourceCountryField`);
     if (sourceField) sourceField.hidden = freelance;
+    const partialField = $(`#${prefix}AmountField`);
+    const partialInput = $(`#${prefix}Amount`);
+    const showPartial = value(`${prefix}Evidence`) === 'PARTIAL';
+    if (partialField) partialField.hidden = !showPartial;
+    if (partialInput) partialInput.disabled = !showPartial;
   }
   $('#monthlyBudget').disabled = checked('budgetUnknown');
 }
@@ -183,7 +194,20 @@ function validateStep(step) {
     else if (radio('petType') === 'DOG' && value('dogBreed') === 'OTHER_KNOWN' && !value('dogBreedName').trim()) error = fieldError(['dogBreedName'], 'Укажите породу собаки.');
     else if (radio('petType') === 'CAT' && !radio('hybridCat')) error = fieldError(['hybridCat'], 'Ответьте, является ли кошка гибридной породой.');
   }
-  const incomeError = (prefix) => !value(`${prefix}Type`) ? fieldError([`${prefix}Type`], 'Укажите тип дохода.') : value(`${prefix}Type`) !== 'FREELANCE_OR_SELF_EMPLOYED' && !parseCountryCode(value(`${prefix}SourceCountry`)) ? fieldError([`${prefix}SourceCountry`], 'Укажите страну источника дохода.') : !parseCountryCode(value(`${prefix}BankCountry`)) ? fieldError([`${prefix}BankCountry`], 'Укажите страну банковского счёта.') : Number(value(`${prefix}TotalAmount`)) <= 0 ? fieldError([`${prefix}TotalAmount`], 'Укажите ваш регулярный доход.') : Number(value(`${prefix}Amount`)) < 0 || Number(value(`${prefix}Amount`)) > Number(value(`${prefix}TotalAmount`)) ? fieldError([`${prefix}Amount`], 'Подтверждаемая часть должна быть от 0 до общей суммы дохода.') : !value(`${prefix}Evidence`) ? fieldError([`${prefix}Evidence`], 'Укажите, как подтверждается доход.') : value(`${prefix}Evidence`) !== 'NONE' && Number(value(`${prefix}Amount`)) <= 0 ? fieldError([`${prefix}Amount`], 'Укажите подтверждаемую сумму.') : null;
+  const incomeError = (prefix) => {
+    if (!value(`${prefix}Type`)) return fieldError([`${prefix}Type`], 'Укажите тип дохода.');
+    if (value(`${prefix}Type`) !== 'FREELANCE_OR_SELF_EMPLOYED' && !parseCountryCode(value(`${prefix}SourceCountry`))) return fieldError([`${prefix}SourceCountry`], 'Укажите страну источника дохода.');
+    if (!parseCountryCode(value(`${prefix}BankCountry`))) return fieldError([`${prefix}BankCountry`], 'Укажите страну банковского счёта.');
+    if (value(`${prefix}TotalAmount`).trim() === '' || Number(value(`${prefix}TotalAmount`)) <= 0) return fieldError([`${prefix}TotalAmount`], 'Укажите ваш регулярный доход.');
+    const evidence = value(`${prefix}Evidence`);
+    if (!evidence) return fieldError([`${prefix}Evidence`], 'Выберите, какую часть дохода можете подтвердить.');
+    if (evidence === 'PARTIAL') {
+      const partial = value(`${prefix}Amount`);
+      if (partial.trim() === '' || Number(partial) <= 0) return fieldError([`${prefix}Amount`], 'Укажите сумму, которую сможете подтвердить.');
+      if (Number(partial) > Number(value(`${prefix}TotalAmount`))) return fieldError([`${prefix}Amount`], 'Подтверждаемая сумма не может быть больше общего дохода.');
+    }
+    return null;
+  };
   if (step === 3) error = incomeError('primary') || (checked('hasAdditionalIncome') ? incomeError('additional') : null) || (radio('partnerIncluded') === 'YES' && checked('partnerHasIncome') ? incomeError('partner') : null);
   if (step === 4 && !value('longTermGoal')) error = fieldError(['longTermGoal'], 'Выберите долгосрочную цель.');
   else if (step === 4 && value('longTermGoal') !== 'TEMPORARY_RESIDENCE_SUFFICIENT' && !radio('keepRuCitizenship')) error = fieldError(['keepRuCitizenship'], 'Укажите, обязательно ли сохранить гражданство РФ.');
@@ -230,30 +254,38 @@ function renderProfileSummary(p) {
 
 function statusClass(status) { return status === 'SUITABLE' ? 'positive' : status === 'UNSUITABLE' ? 'negative' : 'conditional'; }
 
-const LGBT_TOPIC_LABELS = {
-  SAME_SEX_MARRIAGE: 'Брак и семейная иммиграция', MARRIAGE: 'Брак и семейная иммиграция',
-  UNREGISTERED_PARTNER: 'Незарегистрированный партнёр', PARENTHOOD_AND_CHILDREN: 'Дети и родительство',
-  ANTI_DISCRIMINATION: 'Защита от дискриминации', GENDER_IDENTITY: 'Права транс-людей',
-  HATE_CRIME: 'Преступления ненависти', CONVERSION_PRACTICES: 'Конверсионные практики',
-  PRACTICAL_SAFETY: 'Практическая безопасность',
+const LGBT_ROWS = {
+  ES: [
+    ['Брак и переезд с супругом', 'Однополый брак признаётся. Супруг или супруга может участвовать в семейной иммиграции на тех же условиях, что и в разнополом браке.'],
+    ['Незарегистрированные отношения', 'Партнёра без брака можно включить в некоторые программы, но потребуется доказать устойчивые отношения.'],
+    ['Защита от дискриминации', 'Закон защищает от дискриминации в работе, жилье, образовании, медицине и услугах — в том числе иностранцев.'],
+    ['Международная защита', 'Можно просить убежище или дополнительную защиту, если есть личный риск преследования из-за сексуальной ориентации или гендерной идентичности и страна происхождения не может защитить. Решение принимают по обстоятельствам и доказательствам.'],
+  ],
+  UY: [
+    ['Брак и переезд с супругом', 'Однополый брак признаётся. Супруг или супруга может участвовать в семейной иммиграции на тех же условиях, что и в разнополом браке.'],
+    ['Незарегистрированные отношения', 'Без брака семейный союз обычно нужно официально признать. Для unión concubinaria требуется не менее пяти лет совместной жизни и судебное признание.'],
+    ['Защита от дискриминации', 'Дискриминация по сексуальной ориентации и гендерной идентичности запрещена законом. Доступ к защите на практике может отличаться.'],
+    ['Международная защита', 'Можно просить статус беженца, если есть личный риск преследования из-за сексуальной ориентации или гендерной идентичности. Решение принимают по обстоятельствам и доказательствам.'],
+  ],
 };
 
-const LGBT_IMMIGRATION = {
-  ES: { title: 'Иммиграция и международная защита', text: 'Отдельной «ЛГБТ-визы» нет. Можно просить убежище или дополнительную защиту, если есть обоснованный страх преследования из-за сексуальной ориентации или гендерной идентичности и государство происхождения не может защитить. Одной принадлежности к ЛГБТ недостаточно: оценивают личную историю, риск и доказательства.' },
-  UY: { title: 'Иммиграция и международная защита', text: 'Отдельной иммиграционной программы только для ЛГБТ нет. Общая процедура признания беженцем может применяться при доказанном преследовании; это отдельный защитный процесс, а не упрощённый способ получить обычную резиденцию.' },
+const LGBT_SAFETY = {
+  ES: { level: 'Достаточно безопасно', tone: 'safe', text: 'Сильная правовая защита и в целом открытая общественная среда. Уровень личной безопасности может отличаться по районам и ситуациям.' },
+  UY: { level: 'Достаточно безопасно', tone: 'safe', text: 'Страна в целом открыта и имеет сильную правовую защиту. Уровень личной безопасности может отличаться по районам и ситуациям.' },
 };
 
-const LGBT_FUTURE = {
-  ES: 'Полного неравенства с разнополым браком в самом институте брака нет. На практике отдельной проверки могут требовать иностранные документы о родительстве. Дальнейшие изменения обсуждаются прежде всего вокруг усиления ответственности за конверсионные практики; действующий закон уже запрещает их.',
-  UY: 'Однополый брак юридически равен разнополому. Незарегистрированный союз признаётся не автоматически: обычно требуется не менее пяти лет совместной жизни и судебное признание. Подтверждённого общенационального проекта отдельного запрета всех конверсионных практик в исследованных материалах нет.',
+const LGBT_CHANGES = {
+  ES: 'В Испании рассматривается законопроект об уголовной ответственности за конверсионные практики. Конгресс одобрил его и направил в Сенат, но закон пока не принят. На правила въезда, ВНЖ и семейной иммиграции этот проект не влияет.',
+  UY: 'В Монтевидео действует План разнообразия 2026–2030 с новыми мерами в здравоохранении, занятости, жилье и защите от дискриминации. Это городская программа, а не новый национальный закон.',
 };
 
 function renderLgbtResearch(calculation) {
   if (!calculation.lgbt?.rules?.length) return '';
   const countryId = calculation.country.countryId;
-  const legalRules = calculation.lgbt.rules.filter((rule) => !['HATE_CRIME', 'PRACTICAL_SAFETY'].includes(rule.topic));
-  const immigration = LGBT_IMMIGRATION[countryId];
-  return `<section class="lgbt-research"><div class="section-title-row"><div><h3>ЛГБТ: права, семья и иммиграция</h3><p>Простое описание того, что закреплено законом и где остаются ограничения.</p></div></div><div class="lgbt-grid">${legalRules.map((rule) => `<article class="research-card"><h4>${html(LGBT_TOPIC_LABELS[rule.topic] || rule.topic)}</h4><p>${html(rule.notes || 'Описание подтверждённого правила отсутствует.')}</p></article>`).join('')}${immigration ? `<article class="research-card"><h4>${html(immigration.title)}</h4><p>${html(immigration.text)}</p></article>` : ''}<article class="research-card"><h4>Что не равно и что может измениться</h4><p>${html(LGBT_FUTURE[countryId] || 'Подтверждённых изменений в исследованных материалах нет.')}</p></article></div></section>`;
+  const rows = LGBT_ROWS[countryId] || [];
+  const safety = LGBT_SAFETY[countryId];
+  const change = LGBT_CHANGES[countryId];
+  return `<section class="lgbt-research"><div class="section-title-row"><div><h3>ЛГБТ: права, семья и иммиграция</h3><p>Кратко о том, что важно при переезде и жизни в стране.</p></div></div><div class="lgbt-list">${rows.map(([title, text]) => `<div class="lgbt-row"><h4>${html(title)}</h4><p>${html(text)}</p></div>`).join('')}${safety ? `<div class="lgbt-row"><h4>Безопасность</h4><div><span class="lgbt-safety ${html(safety.tone)}">${html(safety.level)}</span><p>${html(safety.text)}</p></div></div>` : ''}${change ? `<div class="lgbt-row"><h4>Что меняется</h4><p>${html(change)}</p></div>` : ''}</div></section>`;
 }
 
 function longTermConditions(route) {
@@ -336,7 +368,7 @@ function switchToResult(calculation, changed = false) {
 
 function showToast(message) { const toast = $('#toast'); toast.textContent = message; toast.hidden = false; clearTimeout(showToast.timer); showToast.timer = setTimeout(() => { toast.hidden = true; }, 2600); }
 
-function draft() { return { version: 1, savedAt: new Date().toISOString(), answers: collectAnswers() }; }
+function draft() { return { version: 2, savedAt: new Date().toISOString(), answers: collectAnswers() }; }
 
 function setRadio(name, val) { const input = $(`input[name="${name}"][value="${CSS.escape(String(val))}"]`); if (input) input.checked = true; }
 function setCheckboxes(name, values = []) { $$(`input[name="${name}"]`).forEach((input) => { input.checked = values.includes(input.value); }); }
@@ -344,9 +376,9 @@ function setCheckboxes(name, values = []) { $$(`input[name="${name}"]`).forEach(
 function restoreDraft() {
   try {
     const stored = JSON.parse(localStorage.getItem(DRAFT_KEY));
-    if (stored?.version !== 1 || !stored.answers) return false;
+    if (stored?.version !== 2 || !stored.answers) return false;
     const a = stored.answers;
-    const simple = ['currentCountry','currentStatus','relationshipType','primaryType','primarySourceCountry','primaryBankCountry','primaryAmount','primaryCurrency','primaryEvidence','additionalType','additionalSourceCountry','additionalBankCountry','additionalAmount','additionalCurrency','additionalEvidence','partnerType','partnerSourceCountry','partnerBankCountry','partnerAmount','partnerCurrency','partnerEvidence','longTermGoal','monthlyBudget','budgetCurrency'];
+    const simple = ['currentCountry','currentStatus','relationshipType','primaryType','primarySourceCountry','primaryBankCountry','primaryTotalAmount','primaryAmount','primaryCurrency','primaryEvidence','additionalType','additionalSourceCountry','additionalBankCountry','additionalTotalAmount','additionalAmount','additionalCurrency','additionalEvidence','partnerType','partnerSourceCountry','partnerBankCountry','partnerTotalAmount','partnerAmount','partnerCurrency','partnerEvidence','longTermGoal','monthlyBudget','budgetCurrency'];
     simple.forEach((id) => { if ($(`#${id}`) && a[id] != null) $(`#${id}`).value = a[id]; });
     if (a.dogBreed) { $('#dogBreed').value = a.dogBreedChoice || (['MIXED', 'UNKNOWN'].includes(a.dogBreed) ? a.dogBreed : 'OTHER_KNOWN'); $('#dogBreedName').value = $('#dogBreed').value === 'OTHER_KNOWN' ? a.dogBreed : ''; }
     setRadio('inRussia', a.inRussia || parseCountryCode(a.currentCountry) === 'RU' ? 'YES' : 'NO'); setRadio('returnToRussia', a.returnToRussia ? 'YES' : 'NO'); setRadio('partnerIncluded', a.partnerIncluded ? 'YES' : 'NO'); setRadio('hasChildren', a.childAges?.length ? 'YES' : 'NO'); setRadio('hasPets', a.petTypes?.[0] && a.petTypes[0] !== 'NONE' ? 'YES' : 'NO'); setRadio('petType', a.petTypes?.[0]); setRadio('hybridCat', a.otherPetNotes?.startsWith('HYBRID_CAT:') ? a.otherPetNotes.split(':')[1] : ''); setRadio('keepRuCitizenship', a.keepRuCitizenship); setRadio('schoolType', a.schoolType); setRadio('kindergartenNeeded', a.kindergartenNeeded ? 'YES' : 'NO');

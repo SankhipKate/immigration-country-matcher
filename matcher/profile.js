@@ -2,6 +2,14 @@ import { parseCountryCode } from './countries.js';
 
 const money = (amount, currency) => amount === '' || amount == null ? null : ({ amount: Number(amount), currency });
 
+
+export function resolveProvableAmount(totalAmount, evidenceLevel, partialAmount) {
+  if (evidenceLevel === 'FULL') return totalAmount === '' || totalAmount == null ? null : Number(totalAmount);
+  if (evidenceLevel === 'NONE') return 0;
+  if (evidenceLevel === 'PARTIAL') return partialAmount === '' || partialAmount == null ? null : Number(partialAmount);
+  return null;
+}
+
 const incomeSource = (prefix, owner, answers) => ({
   owner,
   type: answers[`${prefix}Type`],
