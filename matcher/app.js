@@ -1,10 +1,10 @@
-import { STATUS_LABELS_RU } from '../js/spain-calculator.js?v=0.12.5';
-import { calculateCountries } from '../js/engine/calculate-countries.js?v=0.12.5';
-import { spainAdapter } from '../js/countries/spain-adapter.js?v=0.12.5';
-import { loadCalculationContext } from '../pilot/fx-context.js?v=0.12.5';
-import { countryOptions, parseCountryCode, searchCountries } from './countries.js?v=0.12.5';
-import { isKnownDogBreed, normalizeDogBreed, searchDogBreeds } from './dog-breeds.js?v=0.12.5';
-import { buildUserProfile, describeIncomeRequirement, describeResultIntro, resolveProvableAmount, sortRoutesForDisplay, validateAgainstSchema, validateUserProfile } from './profile.js?v=0.12.5';
+import { STATUS_LABELS_RU } from '../js/spain-calculator.js?v=0.12.6';
+import { calculateCountries } from '../js/engine/calculate-countries.js?v=0.12.6';
+import { spainAdapter } from '../js/countries/spain-adapter.js?v=0.12.6';
+import { loadCalculationContext } from '../pilot/fx-context.js?v=0.12.6';
+import { countryOptions, parseCountryCode, searchCountries } from './countries.js?v=0.12.6';
+import { isKnownDogBreed, normalizeDogBreed, searchDogBreeds } from './dog-breeds.js?v=0.12.6';
+import { buildUserProfile, describeIncomeRequirement, describeResultIntro, resolveProvableAmount, sortRoutesForDisplay, validateAgainstSchema, validateUserProfile } from './profile.js?v=0.12.6';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -337,8 +337,9 @@ function longTermConditions(route) {
   }
   if (rule.language_exam_required === 'YES') items.push(`Язык: требуется ${languageNames[rule.required_language] || rule.required_language || 'местный язык'}${rule.required_language_level ? `, ${levelNames[rule.required_language_level] || `уровень ${rule.required_language_level}`}` : ''}.`);
   else if (rule.language_exam_required === 'UNKNOWN') items.push('Язык: точное требование нужно подтвердить перед выбором долгосрочной стратегии.');
-  if (rule.notes) items.push(rule.notes);
-  else items.push('Срок фактического проживания и допустимые выезды нужно проверить для выбранной долгосрочной цели.');
+  const genericSpainContinuityNote = 'Для гражданства фиксированный универсальный числовой лимит отсутствий в первичном источнике не найден; непрерывность оценивается индивидуально.';
+  if (rule.notes && rule.notes !== genericSpainContinuityNote) items.push(rule.notes);
+  else if (countryId !== 'ES') items.push('Срок фактического проживания и допустимые выезды нужно проверить для выбранной долгосрочной цели.');
   return `<div class="route-client-items"><h4>Путь к ПМЖ и гражданству</h4><ul>${items.map((item) => `<li>${html(item)}</li>`).join('')}</ul></div>`;
 }
 
@@ -439,6 +440,9 @@ function renderResult(calculation, changed = false) {
       tab.setAttribute('aria-selected', String(active));
     });
     $$('[data-country-panel]', $('#result')).forEach((panel) => { panel.hidden = panel.dataset.countryPanel !== countryId; });
+    requestAnimationFrame(() => {
+      $('.country-workspace', $('#result'))?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    });
   };
   $$('[data-country-tab]', $('#result')).forEach((tab) => tab.addEventListener('click', () => activateCountry(tab.dataset.countryTab)));
 }
@@ -503,7 +507,7 @@ $('#editProfile').addEventListener('click', () => { $('#resultView').hidden = tr
 async function init() {
   restoreDraft(); syncChildren(); syncConditional(); showStep(1, false);
   try {
-    const [spainResponse, uruguayResponse, schemaResponse] = await Promise.all([fetch('../data/spain-research-v2.2.json?v=0.12.5'), fetch('../data/uruguay-research-v2.2.json?v=0.12.5'), fetch('../data/schemas/user-profile-v1.schema.json?v=0.12.5')]);
+    const [spainResponse, uruguayResponse, schemaResponse] = await Promise.all([fetch('../data/spain-research-v2.2.json?v=0.12.6'), fetch('../data/uruguay-research-v2.2.json?v=0.12.6'), fetch('../data/schemas/user-profile-v1.schema.json?v=0.12.6')]);
     if (!spainResponse.ok || !uruguayResponse.ok || !schemaResponse.ok) throw new Error(`HTTP ${spainResponse.status}/${uruguayResponse.status}/${schemaResponse.status}`);
     [spainData, uruguayData, profileSchema] = await Promise.all([spainResponse.json(), uruguayResponse.json(), schemaResponse.json()]);
     calculationContext = await loadCalculationContext();

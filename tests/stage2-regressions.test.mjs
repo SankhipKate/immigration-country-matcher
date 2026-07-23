@@ -103,3 +103,19 @@ test('dog breed is a searchable input without a separate other-breed field', asy
   assert.match(app, /enhanceDogBreedSearch/);
   assert.match(app, /searchDogBreeds/);
 });
+
+test('selects match input shape and country tabs reset the detail position', async () => {
+  const [app, styles] = await Promise.all([
+    readFile(new URL('../matcher/app.js', import.meta.url), 'utf8'),
+    readFile(new URL('../matcher/styles.css', import.meta.url), 'utf8'),
+  ]);
+  assert.match(styles, /\.field>select\{[^}]*appearance:none/);
+  assert.match(styles, /\.country-workspace\{scroll-margin-top:16px\}/);
+  assert.match(app, /scrollIntoView\(\{ block: 'start', behavior: 'smooth' \}\)/);
+});
+
+test('Spain result hides the non-informative generic continuity note', async () => {
+  const app = await readFile(new URL('../matcher/app.js', import.meta.url), 'utf8');
+  assert.match(app, /genericSpainContinuityNote/);
+  assert.match(app, /rule\.notes !== genericSpainContinuityNote/);
+});

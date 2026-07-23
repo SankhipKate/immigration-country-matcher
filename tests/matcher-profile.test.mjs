@@ -271,16 +271,16 @@ test('matcher cache keys include the current release for code and country data',
     readFile(new URL('../matcher/index.html', import.meta.url), 'utf8'),
     readFile(new URL('../matcher/app.js', import.meta.url), 'utf8'),
   ]);
-  assert.match(matcher, /styles\.css\?v=0\.12\.5/);
-  assert.match(matcher, /app\.js\?v=0\.12\.5/);
-  assert.match(app, /uruguay-research-v2\.2\.json\?v=0\.12\.5/);
-  assert.match(app, /spain-adapter\.js\?v=0\.12\.5/);
+  assert.match(matcher, /styles\.css\?v=0\.12\.6/);
+  assert.match(matcher, /app\.js\?v=0\.12\.6/);
+  assert.match(app, /uruguay-research-v2\.2\.json\?v=0\.12\.6/);
+  assert.match(app, /spain-adapter\.js\?v=0\.12\.6/);
 });
 
 test('README describes the live matcher and maintenance rule', async () => {
   const readme = await readFile(new URL('../README.md', import.meta.url), 'utf8');
   assert.match(readme, /immigration-country-matcher\/matcher\//);
   assert.match(readme, /README обновляется при каждом изменении/);
-  assert.match(readme, /0\.12\.5/);
+  assert.match(readme, /0\.12\.6/);
   assert.equal(readme.includes('Рабочий пилот Испании'), false);
 });
