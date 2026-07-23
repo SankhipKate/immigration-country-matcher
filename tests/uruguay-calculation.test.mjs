@@ -30,13 +30,13 @@ test('one profile returns independent Spain and Uruguay calculations', () => {
   assert.deepEqual(result.errors, []);
   assert.deepEqual(result.results.map(({ country }) => country.countryId), ['ES', 'UY']);
   assert.equal(result.results[1].bestRoute.routeId, 'UY_DIGITAL_NOMAD');
-  assert.equal(result.results[1].bestRoute.routeStatus, 'SUITABLE_WITH_CONDITIONS');
+  assert.equal(result.results[1].bestRoute.routeStatus, 'SUITABLE');
 });
 
 test('Uruguay digital nomad does not invent a fixed minimum income', () => {
   const result = calculateCountries(remoteProfile(), [uruguay], context, () => spainAdapter).results[0];
   assert.equal(result.bestRoute.thresholdEur, null);
-  assert.ok(result.bestRoute.conditions.some((item) => item.includes('декларацию')));
+  assert.ok(result.bestRoute.initialPermitRequirements.some((item) => item.includes('декларация')));
   assert.match(result.bestRoute.incomeGuidance, /25 383 UYU/);
   assert.match(result.bestRoute.incomeGuidance, /640 USD/);
   assert.match(result.bestRoute.incomeGuidance, /650 USD/);
@@ -46,9 +46,10 @@ test('Uruguay digital nomad does not invent a fixed minimum income', () => {
 test('Uruguay cards distinguish direct permanent, temporary, and nomad routes', () => {
   const result = calculateCountries(remoteProfile(), [uruguay], context, () => spainAdapter).results[0];
   const guidance = Object.fromEntries(result.routes.map((route) => [route.routeId, route.applicationGuidance]));
-  assert.match(guidance.UY_PERMANENT, /временная резиденция перед ней не обязательна/);
-  assert.match(guidance.UY_TEMPORARY, /не обязательная ступень/);
-  assert.match(guidance.UY_DIGITAL_NOMAD, /автоматического перехода нет/);
+  assert.match(guidance.UY_PERMANENT, /Временная резиденция перед постоянной не обязательна/);
+  assert.match(guidance.UY_TEMPORARY, /не является обязательной ступенью/);
+  assert.match(guidance.UY_DIGITAL_NOMAD, /государственный портал Уругвая/);
+  assert.match(guidance.UY_FAMILY_LINK, /связь с гражданином Уругвая/);
 });
 
 test('Uruguay recognizes a same-sex concubine partner with judicial evidence', () => {
@@ -63,6 +64,20 @@ test('Uruguay recognizes a same-sex concubine partner with judicial evidence', (
 });
 
 test('Uruguay package contains only routes available to a Russian-citizenship MVP', () => {
-  assert.deepEqual(uruguay.routes.map(({ route_id }) => route_id), ['UY_PERMANENT', 'UY_TEMPORARY', 'UY_DIGITAL_NOMAD']);
+  assert.deepEqual(uruguay.routes.map(({ route_id }) => route_id), ['UY_PERMANENT', 'UY_TEMPORARY', 'UY_DIGITAL_NOMAD', 'UY_FAMILY_LINK']);
   assert.ok(uruguay.sources.filter(({ official }) => official === 'YES').length >= 5);
+});
+
+
+test('future Uruguay family-link route is conditional for a solo mover and unavailable with a current partner', () => {
+  const solo = calculateCountries(remoteProfile(), [uruguay], context, () => spainAdapter).results[0]
+    .routes.find((route) => route.routeId === 'UY_FAMILY_LINK');
+  assert.equal(solo.routeStatus, 'SUITABLE_WITH_CONDITIONS');
+  assert.ok(solo.conditions.some((item) => item.includes('брак') || item.includes('семейную связь')));
+
+  const profile = remoteProfile();
+  profile.family = { adults_count: 2, partner_included: true, relationship_type: 'MARRIAGE', children: [], school_needed: false };
+  const withPartner = calculateCountries(profile, [uruguay], context, () => spainAdapter).results[0]
+    .routes.find((route) => route.routeId === 'UY_FAMILY_LINK');
+  assert.equal(withPartner.routeStatus, 'UNSUITABLE');
 });
