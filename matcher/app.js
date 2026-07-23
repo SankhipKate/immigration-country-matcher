@@ -1,10 +1,10 @@
-import { STATUS_LABELS_RU } from '../js/spain-calculator.js?v=0.12.6';
-import { calculateCountries } from '../js/engine/calculate-countries.js?v=0.12.6';
-import { spainAdapter } from '../js/countries/spain-adapter.js?v=0.12.6';
-import { loadCalculationContext } from '../pilot/fx-context.js?v=0.12.6';
-import { countryOptions, parseCountryCode, searchCountries } from './countries.js?v=0.12.6';
-import { isKnownDogBreed, normalizeDogBreed, searchDogBreeds } from './dog-breeds.js?v=0.12.6';
-import { buildUserProfile, describeIncomeRequirement, describeResultIntro, resolveProvableAmount, sortRoutesForDisplay, validateAgainstSchema, validateUserProfile } from './profile.js?v=0.12.6';
+import { STATUS_LABELS_RU } from '../js/spain-calculator.js?v=0.12.7';
+import { calculateCountries } from '../js/engine/calculate-countries.js?v=0.12.7';
+import { spainAdapter } from '../js/countries/spain-adapter.js?v=0.12.7';
+import { loadCalculationContext } from '../pilot/fx-context.js?v=0.12.7';
+import { countryOptions, parseCountryCode, searchCountries } from './countries.js?v=0.12.7';
+import { isKnownDogBreed, normalizeDogBreed, searchDogBreeds } from './dog-breeds.js?v=0.12.7';
+import { buildUserProfile, describeIncomeRequirement, describeResultIntro, resolveProvableAmount, sortRoutesForDisplay, validateAgainstSchema, validateUserProfile } from './profile.js?v=0.12.7';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -323,23 +323,55 @@ function longTermConditions(route) {
   if (!route.longTerm) return '';
   const rule = route.longTerm;
   const items = [];
-  const languageNames = { es: 'испанский', en: 'английский', pt: 'португальский', fr: 'французский', de: 'немецкий' };
-  const levelNames = { FUNCTIONAL: 'разговорный уровень', A2: 'уровень A2', B1: 'уровень B1', B2: 'уровень B2' };
   const countryId = route.routeId.startsWith('UY_') ? 'UY' : route.routeId.startsWith('ES_') ? 'ES' : null;
+
   if (countryId === 'ES') {
-    if (rule.residence_counted_for_citizenship === 'NO_AS_STAY_GENERAL_RULE') items.push('Срок до гражданства: период студенческого пребывания обычно не засчитывается как обычная резиденция; после перехода на засчитываемый статус действует общий срок 10 лет до подачи.');
-    else items.push('Срок до гражданства: минимум 10 лет засчитываемого проживания до подачи; рассмотрение заявления занимает дополнительное время.');
+    if (rule.path_to_pr === 'YES' && Number.isFinite(Number(rule.years_to_pr))) {
+      items.push(`ПМЖ: обычно после ${Number(rule.years_to_pr)} лет законного проживания при соблюдении требований к непрерывности.`);
+    } else if (rule.path_to_pr === 'CONDITIONAL') {
+      items.push('ПМЖ: потребуется переход на статус, который засчитывается как резиденция; срок зависит от момента такого перехода.');
+    }
+
+    if (rule.residence_counted_for_citizenship === 'NO_AS_STAY_GENERAL_RULE') {
+      items.push('Гражданство: студенческое пребывание обычно не засчитывается; после перехода на засчитываемую резиденцию действует общий срок 10 лет до подачи.');
+    } else {
+      items.push('Гражданство: обычно после 10 лет законного, непрерывного проживания непосредственно перед подачей.');
+    }
+
+    if (rule.language_exam_required === 'YES') {
+      items.push(`Язык и экзамены: испанский ${rule.required_language_level || 'A2'} и экзамен CCSE.`);
+    }
+    if (rule.renunciation_rules) {
+      items.push('Гражданство РФ: по испанскому праву требуется декларация отказа от прежнего гражданства; практические последствия для гражданства РФ нужно проверять отдельно.');
+    }
   } else if (countryId === 'UY') {
+    if (rule.path_to_pr === 'DIRECT') {
+      items.push('ПМЖ: этот маршрут сразу ведёт к постоянной резиденции.');
+    } else if (rule.path_to_pr === 'CONDITIONAL') {
+      items.push('ПМЖ: автоматического перехода нет; для постоянной резиденции потребуется отдельное подходящее основание.');
+    }
+
     const withFamily = route.routeId === 'UY_FAMILY_LINK' || Boolean(currentProfile?.family?.partner_included || currentProfile?.family?.children?.length);
     const years = withFamily ? 3 : 5;
-    const countNote = route.routeId === 'UY_DIGITAL_NOMAD' || route.routeId === 'UY_TEMPORARY' ? ' Засчитывается ли весь срок именно по этому разрешению, нужно подтвердить перед долгосрочным планированием.' : '';
-    items.push(`Срок до гражданства: обычно ${years} ${years === 3 ? 'года' : 'лет'} обычного проживания ${withFamily ? 'при семье, фактически живущей с вами в Уругвае' : 'без семьи, живущей с вами в Уругвае'}.${countNote}`);
+    let citizenshipText = `Гражданство: обычно после ${years} лет обычного проживания ${withFamily ? 'при семье, фактически живущей с вами в Уругвае' : 'без семьи, живущей с вами в Уругвае'}.`;
+    if (route.routeId === 'UY_DIGITAL_NOMAD' || route.routeId === 'UY_TEMPORARY') {
+      citizenshipText += ' Нужно заранее подтвердить, засчитается ли весь период по этому разрешению как обычное проживание.';
+    } else if (route.routeId === 'UY_FAMILY_LINK') {
+      citizenshipText += ' Брак или семейная связь сами по себе не дают гражданство автоматически.';
+    }
+    items.push(citizenshipText);
+
+    if (rule.language_exam_required === 'YES') {
+      items.push('Язык: нужно понимать испанский и уметь объясняться; стандартизированный экзамен не указан.');
+    }
+    items.push('Выезды: отсутствие более 6 месяцев подряд обнуляет накопленный срок проживания.');
+    if (rule.multiple_citizenship_allowed === 'YES') {
+      items.push('Гражданство РФ: отказ не требуется.');
+    }
+  } else {
+    items.push('Путь к ПМЖ и гражданству нужно проверить для выбранного маршрута.');
   }
-  if (rule.language_exam_required === 'YES') items.push(`Язык: требуется ${languageNames[rule.required_language] || rule.required_language || 'местный язык'}${rule.required_language_level ? `, ${levelNames[rule.required_language_level] || `уровень ${rule.required_language_level}`}` : ''}.`);
-  else if (rule.language_exam_required === 'UNKNOWN') items.push('Язык: точное требование нужно подтвердить перед выбором долгосрочной стратегии.');
-  const genericSpainContinuityNote = 'Для гражданства фиксированный универсальный числовой лимит отсутствий в первичном источнике не найден; непрерывность оценивается индивидуально.';
-  if (rule.notes && rule.notes !== genericSpainContinuityNote) items.push(rule.notes);
-  else if (countryId !== 'ES') items.push('Срок фактического проживания и допустимые выезды нужно проверить для выбранной долгосрочной цели.');
+
   return `<div class="route-client-items"><h4>Путь к ПМЖ и гражданству</h4><ul>${items.map((item) => `<li>${html(item)}</li>`).join('')}</ul></div>`;
 }
 
@@ -507,7 +539,7 @@ $('#editProfile').addEventListener('click', () => { $('#resultView').hidden = tr
 async function init() {
   restoreDraft(); syncChildren(); syncConditional(); showStep(1, false);
   try {
-    const [spainResponse, uruguayResponse, schemaResponse] = await Promise.all([fetch('../data/spain-research-v2.2.json?v=0.12.6'), fetch('../data/uruguay-research-v2.2.json?v=0.12.6'), fetch('../data/schemas/user-profile-v1.schema.json?v=0.12.6')]);
+    const [spainResponse, uruguayResponse, schemaResponse] = await Promise.all([fetch('../data/spain-research-v2.2.json?v=0.12.7'), fetch('../data/uruguay-research-v2.2.json?v=0.12.7'), fetch('../data/schemas/user-profile-v1.schema.json?v=0.12.7')]);
     if (!spainResponse.ok || !uruguayResponse.ok || !schemaResponse.ok) throw new Error(`HTTP ${spainResponse.status}/${uruguayResponse.status}/${schemaResponse.status}`);
     [spainData, uruguayData, profileSchema] = await Promise.all([spainResponse.json(), uruguayResponse.json(), schemaResponse.json()]);
     calculationContext = await loadCalculationContext();

@@ -764,7 +764,7 @@
       "source_id": "S_ES_LONGTERM",
       "last_verified_at": "2026-07-18",
       "confidence": "MEDIUM",
-      "notes": "Для гражданства фиксированный универсальный числовой лимит отсутствий в первичном источнике не найден; непрерывность оценивается индивидуально.",
+      "notes": "Для гражданства требуется законное, непрерывное проживание непосредственно перед подачей.",
       "minimum_physical_presence_pr_days_year": null,
       "minimum_physical_presence_citizenship_days_year": null
     },
@@ -793,7 +793,7 @@
       "source_id": "S_ES_LONGTERM",
       "last_verified_at": "2026-07-18",
       "confidence": "MEDIUM",
-      "notes": "Для гражданства фиксированный универсальный числовой лимит отсутствий в первичном источнике не найден; непрерывность оценивается индивидуально.",
+      "notes": "Для гражданства требуется законное, непрерывное проживание непосредственно перед подачей.",
       "minimum_physical_presence_pr_days_year": null,
       "minimum_physical_presence_citizenship_days_year": null
     },
@@ -822,7 +822,7 @@
       "source_id": "S_ES_LONGTERM",
       "last_verified_at": "2026-07-18",
       "confidence": "MEDIUM",
-      "notes": "Для гражданства фиксированный универсальный числовой лимит отсутствий в первичном источнике не найден; непрерывность оценивается индивидуально.",
+      "notes": "Для гражданства требуется законное, непрерывное проживание непосредственно перед подачей.",
       "minimum_physical_presence_pr_days_year": null,
       "minimum_physical_presence_citizenship_days_year": null
     },
@@ -851,7 +851,7 @@
       "source_id": "S_ES_LONGTERM",
       "last_verified_at": "2026-07-18",
       "confidence": "MEDIUM",
-      "notes": "Для гражданства фиксированный универсальный числовой лимит отсутствий в первичном источнике не найден; непрерывность оценивается индивидуально.",
+      "notes": "Для гражданства требуется законное, непрерывное проживание непосредственно перед подачей.",
       "minimum_physical_presence_pr_days_year": null,
       "minimum_physical_presence_citizenship_days_year": null
     },
@@ -880,7 +880,7 @@
       "source_id": "S_ES_LONGTERM",
       "last_verified_at": "2026-07-18",
       "confidence": "MEDIUM",
-      "notes": "Для гражданства фиксированный универсальный числовой лимит отсутствий в первичном источнике не найден; непрерывность оценивается индивидуально.",
+      "notes": "Для гражданства требуется законное, непрерывное проживание непосредственно перед подачей.",
       "minimum_physical_presence_pr_days_year": null,
       "minimum_physical_presence_citizenship_days_year": null
     },
@@ -909,7 +909,7 @@
       "source_id": "S_ES_CITIZENSHIP",
       "last_verified_at": "2026-07-18",
       "confidence": "LOW",
-      "notes": "Студенческая estancia не равна обычной residencia для гражданства; переход на резиденцию и зачёт в ПМЖ требуют отдельного расчёта.",
+      "notes": "Студенческая estancia обычно не считается residencia для гражданства; срок начинает учитываться после перехода на засчитываемую резиденцию.",
       "minimum_physical_presence_pr_days_year": null,
       "minimum_physical_presence_citizenship_days_year": null
     }
