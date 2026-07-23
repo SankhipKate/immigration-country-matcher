@@ -173,6 +173,12 @@ function incomeEvaluation(route, indexes, profile, context) {
   const requirementConversion = convertMoney(profile.incomeMoney, 'EUR', context, 'income.primary.monthly_provable');
   const incomeEur = requirementConversion?.convertedAmount ?? null;
   const base = { incomeEur, requirementConversion };
+  if (rule.familyLinkFuture) {
+    const check = profile.partnerIncluded
+      ? outcome(ROUTE_STATUSES.UNSUITABLE, 'future_family_link_blocked_by_partner', 'Этот будущий маршрут не подходит, если вы переезжаете с текущим партнёром.')
+      : outcome(ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS, 'future_uruguayan_family_link_required', 'Маршрут станет доступен только после брака или официально признанной семейной связи с гражданином Уругвая.', { condition: 'Заключить брак или подтвердить предусмотренную законом семейную связь с гражданином Уругвая.' });
+    return { ...base, checks: [check], thresholdEur: null, incomeTypeFit: 'NOT_APPLICABLE', incomeFit: 'NOT_APPLICABLE' };
+  }
   if (!profile.plannedBasis) return { ...base, checks: [outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'income_type_missing', 'Нужно указать основной тип дохода.', { field: 'income.primary.type' })], thresholdEur: null, incomeTypeFit: 'UNKNOWN', incomeFit: 'UNKNOWN' };
   let basisChecks = [];
   if (rule.separateBasis) {
@@ -190,7 +196,7 @@ function incomeEvaluation(route, indexes, profile, context) {
   if (rule.meansDeclaration) {
     const checks = profile.monthlyIncomeUsd == null
       ? [outcome(ROUTE_STATUSES.PRELIMINARY_SUITABLE, 'income_missing', 'Нужно указать средства для проживания и подтвердить их декларацией.', { field: 'income.primary.amount' })]
-      : [outcome(ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS, 'means_declaration_required', 'Официальный фиксированный минимум не установлен; потребуется декларация о достаточных средствах.', { condition: 'Подать подписанную декларацию о наличии средств для проживания.' })];
+      : [outcome(ROUTE_STATUSES.SUITABLE, 'means_declaration_required', 'Официальный фиксированный минимум не установлен; потребуется декларация о достаточных средствах.')];
     return { ...base, checks, thresholdEur: null, incomeTypeFit: 'MEETS', incomeFit: profile.monthlyIncomeUsd == null ? 'UNKNOWN' : 'MEETS', incomeGuidance: 'Официального фиксированного порога нет. Ориентиры: минимальная зарплата с 1 июля 2026 года — 25 383 UYU (примерно 640 USD) в месяц; в одном публичном личном опыте заявитель сообщил о принятии 650 USD в месяц. Это не официальный минимум и не гарантия решения.' };
   }
   if (rule.missingSalaryThreshold) return { ...base, checks: [outcome(ROUTE_STATUSES.INSUFFICIENT_COUNTRY_DATA, 'hq_salary_missing', 'Зарплатный порог проверяется после получения конкретного предложения работы.')], thresholdEur: null, incomeTypeFit: 'NOT_APPLICABLE', incomeFit: 'UNKNOWN' };
@@ -320,16 +326,17 @@ function evaluateRoute(route, indexes, profile, context) {
   const blockerActions = checks.filter((check) => check.status === ROUTE_STATUSES.UNSUITABLE).map(actionFor);
   const enablingActions = checks.filter((check) => check.code === 'separate_route_basis_required').map((check) => check.message);
   const actions = [...blockerActions, ...enablingActions].filter(Boolean);
-  const requirementCodes = new Set(['dnv_foreign_income_source', 'social_security_required']);
+  const requirementCodes = new Set(['dnv_foreign_income_source', 'social_security_required', 'means_declaration_required', 'future_uruguayan_family_link_required']);
   const initialPermitRequirements = checks.filter((check) => requirementCodes.has(check.code)).map((check) => check.message);
   const applicationGuidance = {
     ES_DNV: 'Из Испании податься можно, если вы находитесь там законно. При подаче через консульство вне России нужен резидентский статус в стране подачи; альтернативно можно подаваться из России.',
     ES_ENTREPRENEUR: 'Из Испании податься можно при законном статусе. Заявление на разрешение подаёт сам предприниматель электронно через UGE; из-за рубежа доступен визовый путь.',
     ES_HIGHLY_QUALIFIED: 'Подача возможна, пока специалист законно находится в Испании, но заявление через UGE подаёт испанский работодатель. Если специалист за рубежом, после одобрения разрешения оформляется виза.',
     ES_STUDENT: 'Из Испании податься можно только на высшее образование: заявитель должен быть совершеннолетним, находиться законно и подать документы не позднее чем за два месяца до окончания законного статуса и до начала учёбы. Для остальных учебных программ используется консульская подача.',
-    UY_PERMANENT: 'Это прямая постоянная резиденция: временная резиденция перед ней не обязательна. Заявление подаётся внутри Уругвая.',
-    UY_TEMPORARY: 'Это отдельная срочная категория по работе, учёбе или другой временной цели, а не обязательная ступень перед постоянной резиденцией.',
-    UY_DIGITAL_NOMAD: 'Это отдельное разрешение на 6 месяцев с продлением ещё на 6. Затем можно отдельно обратиться за временной или постоянной резиденцией; автоматического перехода нет.',
+    UY_PERMANENT: 'Подача после въезда в Уругвай. Заявление начинается онлайн через государственный портал, затем нужно лично прийти с оригиналами документов в выбранное отделение Национального управления миграции. Временная резиденция перед постоянной не обязательна.',
+    UY_TEMPORARY: 'Подача после въезда в Уругвай. Заявление начинается онлайн или через Национальное управление миграции, после проверки назначается личный визит с оригиналами. Маршрут рассчитан на временную работу, учёбу или другую деятельность сроком более 180 дней и не является обязательной ступенью перед постоянной резиденцией.',
+    UY_DIGITAL_NOMAD: 'Заявление подаётся через государственный портал Уругвая или лично в Национальном управлении миграции. Разрешение действует 6 месяцев и может быть продлено ещё на 6. Оплата и завершение оформления требуют нахождения в Уругвае.',
+    UY_FAMILY_LINK: 'Заявление подаётся в Национальное управление миграции Уругвая; начать его можно онлайн. Закон также допускает подачу через консульское учреждение Уругвая, после чего дело продолжает Министерство внутренних дел. Понадобятся документы, подтверждающие связь с гражданином Уругвая.',
   }[route.route_id] || null;
   return {
     routeId: route.route_id, routeName: route.name_ru || route.official_name, routeStatus, statusLabel: STATUS_LABELS_RU[routeStatus],

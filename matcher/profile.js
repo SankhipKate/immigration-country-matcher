@@ -213,8 +213,8 @@ export function describeIncomeRequirement(route, formatCurrency) {
 export function describeResultIntro(routes, changed = false) {
   const allUnsuitable = routes?.length > 0 && routes.every((route) => route.routeStatus === 'UNSUITABLE');
   return {
-    heading: changed ? 'Результат обновлён после уточнения' : allUnsuitable ? 'Сейчас подходящих вариантов не найдено' : 'Предварительный результат',
-    routeLabel: allUnsuitable ? 'Наиболее близкий вариант при изменении условий' : 'Лучший доступный вариант',
+    heading: changed ? 'Результат обновлён после уточнения' : allUnsuitable ? 'Сейчас подходящих вариантов не найдено' : 'Результат по стране',
+    routeLabel: allUnsuitable ? 'Наиболее близкий вариант при изменении условий' : 'Наиболее подходящий вариант по вашим ответам',
   };
 }
 

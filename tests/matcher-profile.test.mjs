@@ -203,7 +203,11 @@ test('result UI shows city comparisons and a human-readable row-based LGBT secti
   assert.equal(app.includes('Что не равно'), false);
   assert.equal(styles.includes('.lgbt-grid'), false);
   assert.match(styles, /\.lgbt-row\{display:grid/);
-  assert.match(app, /средние дневные минимумы и максимумы/);
+  assert.equal(app.includes('средние дневные минимумы и максимумы'), false);
+  assert.equal(app.includes('Одна анкета независимо проверена'), false);
+  assert.equal(app.includes('Все варианты ниже относятся только к стране'), false);
+  assert.equal(app.includes('Школа: без платной международной школы'), false);
+  assert.match(app, /Срок до гражданства:/);
   assert.equal(app.includes('Для выбранного размера города в пакете пока нет отдельной модели'), false);
   assert.match(styles, /@media\(max-width:760px\)[\s\S]*\.country-toggle\{display:block/);
   assert.equal(styles.includes('.country-toggle{display:none}'), false);
@@ -244,6 +248,6 @@ test('README describes the live matcher and maintenance rule', async () => {
   const readme = await readFile(new URL('../README.md', import.meta.url), 'utf8');
   assert.match(readme, /immigration-country-matcher\/matcher\//);
   assert.match(readme, /README обновляется при каждом изменении/);
-  assert.match(readme, /0\.12\.1/);
+  assert.match(readme, /0\.12\.2/);
   assert.equal(readme.includes('Рабочий пилот Испании'), false);
 });
