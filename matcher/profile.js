@@ -206,6 +206,7 @@ export function describeIncomeRequirement(route, formatCurrency) {
     const change = acceptedByRoute[route.routeId] || 'Для этого маршрута требуется другой юридически допустимый источник средств.';
     return `Ваш текущий тип дохода не принимается для этого варианта. ${change} Сумма дохода не является причиной отказа.`;
   }
+  if (route?.thresholdUsd != null) return `Подтверждаемый доход должен быть больше ${formatCurrency(route.thresholdUsd, 'USD')} в месяц.`;
   if (route?.thresholdEur == null) return 'Финансовое требование для этого варианта не выражено единым порогом и проверяется по документам.';
   return `Минимальный подтверждаемый доход: ${formatCurrency(route.thresholdEur, 'EUR')} в месяц.`;
 }
