@@ -1,6 +1,6 @@
-import { CalculationContextError } from '../engine/calculate-country.js?v=7.0.1';
-import { convertMoney } from '../engine/currency.js?v=7.0.1';
-import { ROUTE_STATUSES, STATUS_LABELS_RU } from '../engine/status-contract.js?v=7.0.1';
+import { CalculationContextError } from '../engine/calculate-country.js?v=7.0.2';
+import { convertMoney } from '../engine/currency.js?v=7.0.2';
+import { ROUTE_STATUSES, STATUS_LABELS_RU } from '../engine/status-contract.js?v=7.0.2';
 
 const PUBLIC_ROUTE_IDS = new Set([
   'MX_TEMP_ECONOMIC_SOLVENCY',
@@ -208,13 +208,8 @@ function economicEvaluation(route, profile, context) {
   );
   const income = matchingEconomicIncome(profile);
   const answers = routeAnswers(profile, route.route_id);
-  const readyToRaise = affirmative(answers.ready_to_raise_income ?? answers.ready_to_build_financial_history);
   const incomeMeets = income.amountUsd >= threshold.amount;
   const savingsMeets = Number(profile.savingsUsd) >= savingsThreshold.convertedAmount;
-  const incomeHistoryMonths = Math.min(
-    ...income.eligible.map((source) => Number(source.history_months ?? 0)),
-  );
-  const savingsHistoryMonths = Number(answers.savings_history_months ?? 0);
   const checks = [];
 
   if (income.sources.length > 0 && income.eligible.length === 0 && income.local.length > 0 && !savingsMeets) {
@@ -227,73 +222,38 @@ function economicEvaluation(route, profile, context) {
   } else if (incomeMeets) {
     if (income.unknown.length > 0) {
       checks.push(outcome(
-        ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS,
-        'economic_foreign_source_confirmation_required',
-        'Для части дохода не указана страна источника; консульству потребуется подтвердить, что оплата поступает из-за рубежа.',
-        {
-          condition: 'Подтвердить иностранное происхождение дохода.',
-          action: 'Подготовить договоры, письма работодателя или заказчиков и банковские выписки с иностранным источником выплат.',
-        },
-      ));
-    }
-    if (!Number.isFinite(incomeHistoryMonths) || incomeHistoryMonths < 6) {
-      checks.push(outcome(
-        ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS,
-        'economic_income_history_required',
-        'Финансовый порог достигнут, но требуется полная шестимесячная история подходящего дохода.',
-        {
-          condition: 'Сформировать 6 полных месяцев подтверждаемого дохода.',
-          action: 'Подготовить выписки и подтверждения занятости или выплат за 6 полных месяцев.',
-        },
-      ));
-    }
-    if (checks.length === 0) {
-      checks.push(outcome(
         ROUTE_STATUSES.SUITABLE,
-        'economic_income_confirmed',
-        'Иностранный подтверждаемый доход достигает официального порога и имеет требуемую шестимесячную историю.',
-      ));
-    }
-  } else if (savingsMeets) {
-    if (savingsHistoryMonths >= 12) {
-      checks.push(outcome(
-        ROUTE_STATUSES.SUITABLE,
-        'economic_savings_confirmed',
-        'Подтверждаемые накопления достигают официальной альтернативы и имеют требуемую двенадцатимесячную историю среднего остатка.',
+        'economic_foreign_source_documents_required',
+        'Доход достигает порога. При подаче потребуется подтвердить иностранное происхождение выплат.',
+        { action: 'Подготовить договоры, письма работодателя или заказчиков и банковские выписки, подтверждающие иностранный источник выплат.' },
       ));
     } else {
       checks.push(outcome(
-        ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS,
-        'economic_savings_history_required',
-        'Сумма накоплений достигает официальной альтернативы, но нужно подтвердить средний остаток за 12 месяцев.',
-        {
-          condition: 'Подтвердить средний остаток за 12 месяцев.',
-          action: 'Подготовить банковские или инвестиционные выписки за полный двенадцатимесячный период.',
-        },
+        ROUTE_STATUSES.SUITABLE,
+        'economic_income_confirmed',
+        'Иностранный подтверждаемый доход достигает официального порога.',
+        { action: 'Для подачи подготовить выписки и подтверждения дохода за последние 6 полных месяцев.' },
       ));
     }
+
+  } else if (savingsMeets) {
+    checks.push(outcome(
+      ROUTE_STATUSES.SUITABLE,
+      'economic_savings_confirmed',
+      'Подтверждаемые накопления достигают официальной финансовой альтернативы.',
+      { action: 'Для подачи подготовить банковские или инвестиционные выписки, подтверждающие средний остаток за последние 12 месяцев.' },
+    ));
+
   } else {
     const current = Math.max(income.amountUsd || 0, profile.savingsUsd || 0);
     const target = income.amountUsd > 0 ? threshold.amount : savingsThreshold.convertedAmount;
     const message = `Подтверждаемое финансовое основание составляет около ${Math.round(current)} USD, а применимый порог — около ${Math.round(target)} USD.`;
-    if (readyToRaise) {
-      checks.push(outcome(
-        ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS,
-        'economic_financial_increase_required',
-        message,
-        {
-          condition: 'Довести доход или средний остаток до официального порога и сформировать требуемую историю.',
-          action: `Подтвердить не менее ${Math.ceil(threshold.amount)} USD дохода в месяц за 6 месяцев либо около ${Math.ceil(savingsThreshold.convertedAmount)} USD среднего остатка за 12 месяцев.`,
-        },
-      ));
-    } else {
-      checks.push(outcome(
-        ROUTE_STATUSES.UNSUITABLE,
-        'economic_financial_below_threshold',
-        message,
-        { action: 'Увеличить подтверждаемый иностранный доход или средний остаток до официального порога.' },
-      ));
-    }
+    checks.push(outcome(
+      ROUTE_STATUSES.UNSUITABLE,
+      'economic_financial_below_threshold',
+      message,
+      { action: 'Для этого маршрута подтверждаемый доход или накопления должны достигать официального порога.' },
+    ));
   }
 
   return {
@@ -364,51 +324,28 @@ function incomeEvaluation(route, profile, context) {
 }
 
 function applicationEvaluation(route, profile) {
-  const methods = new Set(profile.applicationMethods || []);
-  const consularAccepted = methods.has('RUSSIA') || methods.has('CURRENT_COUNTRY') || methods.has('ANY');
-  if (!consularAccepted) {
-    return [outcome(
-      ROUTE_STATUSES.UNSUITABLE,
-      'mexico_consular_filing_required',
-      'Первоначальная подача требует мексиканского консульства; обычная подача только после въезда для этих маршрутов не подтверждена.',
-      { action: 'Выбрать подачу из России или из страны законного пребывания.' },
-    )];
-  }
   return [outcome(
     ROUTE_STATUSES.SUITABLE,
-    'mexico_consular_path_available',
-    'Первоначальная виза оформляется через мексиканское консульство; после въезда карта резидента оформляется в INM.',
+    'mexico_application_procedure',
+    'Место подачи является процедурным требованием и не понижает статус маршрута. Первоначальная виза оформляется через мексиканское консульство; после въезда карта резидента оформляется в INM.',
+    { action: 'Подать заявление в компетентное мексиканское консульство, затем после въезда оформить карту резидента в INM.' },
   )];
 }
 
 function familyEvaluation(route, profile) {
-  const checks = [];
   if (!profile.partnerIncluded && profile.children.length === 0) {
     return [outcome(ROUTE_STATUSES.SUITABLE, 'family_not_applicable', 'Семейное присоединение для текущего состава семьи не требуется.')];
   }
-
-  checks.push(outcome(
-    ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS,
-    'family_unity_after_residence',
-    'Партнёр и дети присоединяются по отдельной процедуре семейного единства после оформления статуса основного резидента.',
-    {
-      condition: 'Оформить семейное единство и подтвердить родство или семейную связь.',
-      action: 'Подготовить апостилированные или легализованные акты, перевод на испанский и отдельные заявления членов семьи.',
-    },
-  ));
-
+  const actions = ['Для членов семьи подготовить документы о родстве или семейной связи, апостиль или легализацию, перевод на испанский и отдельные заявления.'];
   if (profile.partnerIncluded && profile.relationshipType === 'UNREGISTERED_PARTNER') {
-    checks.push(outcome(
-      ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS,
-      'concubinato_evidence_required',
-      'Незарегистрированному партнёру требуется подтвердить фактический союз по правилам concubinato или общей семьи.',
-      {
-        condition: 'Подтвердить фактический союз или наличие общего ребёнка.',
-        action: 'Подготовить доказательства совместной жизни, общий акт о ребёнке либо документ эквивалентной семейной фигуры.',
-      },
-    ));
+    actions.push('Для незарегистрированного партнёра подготовить доказательства concubinato (юридически признаваемого фактического союза) или общей семьи.');
   }
-  return checks;
+  return [outcome(
+    ROUTE_STATUSES.SUITABLE,
+    'family_unity_available',
+    'Партнёр и дети могут присоединиться по процедуре семейного единства. Подготовка семейных документов является требованием к подаче и не понижает статус маршрута.',
+    { action: actions.join(' ') },
+  )];
 }
 
 function goalEvaluation(route, profile) {
@@ -480,7 +417,7 @@ function evaluateRoute(route, indexes, profile, context) {
     incomeTypeFit: income.incomeTypeFit,
     incomeFit: income.incomeFit,
     countryMissingCount: 0,
-    clientMissingCount: conditions.length,
+    clientMissingCount: 0,
     conditionsCount: conditions.length,
     scenarioAffinity: route.route_id === 'MX_TEMP_ECONOMIC_SOLVENCY'
       && ECONOMIC_INCOME_TYPES.has(profile.primaryIncome.type)
@@ -493,10 +430,10 @@ function evaluateRoute(route, indexes, profile, context) {
     missing: [],
     countryMissing: [],
     preliminary: [],
-    clientMissing: conditions,
+    clientMissing: [],
     review: route.open_questions || [],
     actions,
-    initialPermitRequirements: [],
+    initialPermitRequirements: actions,
     incomeGuidance: income.incomeGuidance || route.income_rule_ru || null,
     applicationGuidance,
     followUpQuestions: [],

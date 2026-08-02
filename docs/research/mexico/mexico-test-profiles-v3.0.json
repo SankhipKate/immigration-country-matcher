@@ -6,17 +6,16 @@
   "profiles": [
     {
       "profile_id": "MX_SOLVENCY_INCOME_SUITABLE",
-      "description_ru": "Иностранная удалённая зарплата 90 000 MXN в месяц, подтверждённая 6 месяцев.",
+      "description_ru": "Иностранная удалённая зарплата 90 000 MXN в месяц; выписки за 6 месяцев готовятся к подаче.",
       "inputs": {
         "citizenship": "RU",
         "foreign_salary_paid_abroad": true,
-        "monthly_net_income_mxn": 90000,
-        "income_history_months": 6
+        "monthly_net_income_mxn": 90000
       },
       "expected": {
         "MX_TEMP_ECONOMIC_SOLVENCY": "SUITABLE"
       },
-      "reason_ru": "Доход выше порога 79 770,80 MXN и есть требуемая история."
+      "reason_ru": "Доход выше порога 79 770,80 MXN; период выписок является документальным требованием."
     },
     {
       "profile_id": "MX_SOLVENCY_SAVINGS_SUITABLE",
@@ -31,26 +30,24 @@
       "reason_ru": "Средний остаток выше порога 1 344 372,60 MXN."
     },
     {
-      "profile_id": "MX_SOLVENCY_CONDITIONAL_RAISE",
-      "description_ru": "Доход 70 000 MXN, пользователь готов увеличить доход и сформировать новую историю.",
+      "profile_id": "MX_SOLVENCY_UNSUITABLE_BELOW_INCOME_THRESHOLD",
+      "description_ru": "Подтверждаемый доход 70 000 MXN, ниже обязательного порога.",
       "inputs": {
         "citizenship": "RU",
-        "monthly_net_income_mxn": 70000,
-        "ready_to_raise_income": true
+        "monthly_net_income_mxn": 70000
       },
       "expected": {
-        "MX_TEMP_ECONOMIC_SOLVENCY": "SUITABLE_WITH_CONDITIONS"
+        "MX_TEMP_ECONOMIC_SOLVENCY": "UNSUITABLE"
       },
-      "reason_ru": "Необходимо содержательно увеличить доход до порога и подтвердить его 6 месяцев."
+      "reason_ru": "Подтверждаемый доход ниже 79 770,80 MXN; намерение увеличить доход не проверяется."
     },
     {
       "profile_id": "MX_SOLVENCY_UNSUITABLE",
-      "description_ru": "Доход и накопления ниже порога, изменения не планируются.",
+      "description_ru": "Подтверждаемые доход и накопления ниже обоих обязательных порогов.",
       "inputs": {
         "citizenship": "RU",
         "monthly_net_income_mxn": 50000,
-        "average_savings_mxn_12m": 500000,
-        "ready_to_raise_income": false
+        "average_savings_mxn_12m": 500000
       },
       "expected": {
         "MX_TEMP_ECONOMIC_SOLVENCY": "UNSUITABLE"
@@ -58,8 +55,8 @@
       "reason_ru": "Ни один обязательный финансовый вариант не выполнен."
     },
     {
-      "profile_id": "MX_SOLVENCY_RUSSIAN_BANK_CONDITION",
-      "description_ru": "Порог выполнен на российском счёте, но формат документов консульством ещё не подтверждён.",
+      "profile_id": "MX_SOLVENCY_RUSSIAN_BANK_SUITABLE",
+      "description_ru": "Порог накоплений выполнен на российском счёте; формат документов проверяется при подготовке подачи.",
       "inputs": {
         "citizenship": "RU",
         "average_savings_mxn_12m": 1500000,
@@ -67,9 +64,9 @@
         "consulate_document_format_confirmed": false
       },
       "expected": {
-        "MX_TEMP_ECONOMIC_SOLVENCY": "SUITABLE_WITH_CONDITIONS"
+        "MX_TEMP_ECONOMIC_SOLVENCY": "SUITABLE"
       },
-      "reason_ru": "Российский счёт не исключает маршрут; необходимо подтвердить формат, заверение и доступность средств."
+      "reason_ru": "Российский счёт не исключает маршрут; формат, заверение и доступность средств являются требованиями к документам."
     },
     {
       "profile_id": "MX_JOB_OFFER_SUITABLE",

@@ -1,16 +1,16 @@
-import { STATUS_LABELS_RU } from '../js/spain-calculator.js?v=7.0.1';
-import { calculateCountries } from '../js/engine/calculate-countries.js?v=7.0.1';
-import { spainAdapter } from '../js/countries/spain-adapter.js?v=7.0.1';
-import { argentinaAdapter } from '../js/countries/argentina-adapter.js?v=7.0.1';
-import { paraguayAdapter } from '../js/countries/paraguay-adapter.js?v=7.0.1';
-import { portugalAdapter } from '../js/countries/portugal-adapter.js?v=7.0.1';
-import { mexicoAdapter } from '../js/countries/mexico-adapter.js?v=7.0.1';
-import { brazilAdapter } from '../js/countries/brazil-adapter.js?v=7.0.1';
-import { loadCalculationContext } from '../pilot/fx-context.js?v=7.0.1';
-import { countryOptions, parseCountryCode, searchCountries } from './countries.js?v=7.0.1';
-import { isKnownDogBreed, normalizeDogBreed, searchDogBreeds } from './dog-breeds.js?v=7.0.1';
-import { formatCurrency } from './format.js?v=7.0.1';
-import { buildUserProfile, cityCategories, describeIncomeRequirement, describeResultIntro, resolveProvableAmount, sortCountriesForDisplay, sortRoutesForDisplay, uniqueRouteActions, validateAgainstSchema, validateUserProfile } from './profile.js?v=7.0.1';
+import { STATUS_LABELS_RU } from '../js/spain-calculator.js?v=7.0.2';
+import { calculateCountries } from '../js/engine/calculate-countries.js?v=7.0.2';
+import { spainAdapter } from '../js/countries/spain-adapter.js?v=7.0.2';
+import { argentinaAdapter } from '../js/countries/argentina-adapter.js?v=7.0.2';
+import { paraguayAdapter } from '../js/countries/paraguay-adapter.js?v=7.0.2';
+import { portugalAdapter } from '../js/countries/portugal-adapter.js?v=7.0.2';
+import { mexicoAdapter } from '../js/countries/mexico-adapter.js?v=7.0.2';
+import { brazilAdapter } from '../js/countries/brazil-adapter.js?v=7.0.2';
+import { loadCalculationContext } from '../pilot/fx-context.js?v=7.0.2';
+import { countryOptions, parseCountryCode, searchCountries } from './countries.js?v=7.0.2';
+import { isKnownDogBreed, normalizeDogBreed, searchDogBreeds } from './dog-breeds.js?v=7.0.2';
+import { formatCurrency } from './format.js?v=7.0.2';
+import { buildUserProfile, cityCategories, describeIncomeRequirement, describeResultIntro, resolveProvableAmount, sortCountriesForDisplay, sortRoutesForDisplay, uniqueRouteActions, validateAgainstSchema, validateUserProfile } from './profile.js?v=7.0.2';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -620,14 +620,14 @@ async function init() {
   restoreDraft(); syncChildren(); syncConditional(); showStep(1, false);
   try {
     const [spainResponse, uruguayResponse, argentinaResponse, paraguayResponse, portugalResponse, mexicoResponse, brazilResponse, schemaResponse] = await Promise.all([
-      fetch('../data/spain-research-v2.2.json?v=7.0.1'),
-      fetch('../data/uruguay-research-v2.2.json?v=7.0.1'),
-      fetch('../data/argentina-research-v3.0.json?v=7.0.1'),
-      fetch('../data/paraguay-research-v3.0.json?v=7.0.1'),
-      fetch('../data/portugal-research-v3.0.json?v=7.0.1'),
-      fetch('../data/mexico-research-v3.0.json?v=7.0.1'),
-      fetch('../data/brazil-research-v3.0.json?v=7.0.1'),
-      fetch('../data/schemas/user-profile-v1.schema.json?v=7.0.1'),
+      fetch('../data/spain-research-v2.2.json?v=7.0.2'),
+      fetch('../data/uruguay-research-v2.2.json?v=7.0.2'),
+      fetch('../data/argentina-research-v3.0.json?v=7.0.2'),
+      fetch('../data/paraguay-research-v3.0.json?v=7.0.2'),
+      fetch('../data/portugal-research-v3.0.json?v=7.0.2'),
+      fetch('../data/mexico-research-v3.0.json?v=7.0.2'),
+      fetch('../data/brazil-research-v3.0.json?v=7.0.2'),
+      fetch('../data/schemas/user-profile-v1.schema.json?v=7.0.2'),
     ]);
     if (!spainResponse.ok || !uruguayResponse.ok || !argentinaResponse.ok || !paraguayResponse.ok || !portugalResponse.ok || !mexicoResponse.ok || !brazilResponse.ok || !schemaResponse.ok) {
       throw new Error(`HTTP ${spainResponse.status}/${uruguayResponse.status}/${argentinaResponse.status}/${paraguayResponse.status}/${portugalResponse.status}/${mexicoResponse.status}/${brazilResponse.status}/${schemaResponse.status}`);

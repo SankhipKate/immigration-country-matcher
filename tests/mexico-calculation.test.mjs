@@ -7,7 +7,7 @@ import { mexicoAdapter } from '../js/countries/mexico-adapter.js';
 const mexico = JSON.parse(await readFile(new URL('../data/mexico-research-v3.0.json', import.meta.url), 'utf8'));
 const context = {
   calculation_date: '2026-08-01T08:00:00Z',
-  engine_version: '7.0.1',
+  engine_version: '7.0.2',
   fx: {
     base_currency: 'USD',
     rates: { EUR: 0.87, RUB: 80, ARS: 1350, MXN: 18 },
@@ -90,7 +90,7 @@ test('economic-solvency route accepts documented foreign income above the curren
   assert.equal(result.bestRoute.routeId, 'MX_TEMP_ECONOMIC_SOLVENCY');
 });
 
-test('economic-solvency route rejects income below the threshold without a growth plan', () => {
+test('economic-solvency route rejects income below the threshold', () => {
   const candidate = profile();
   candidate.income.primary = income('REMOTE_EMPLOYMENT', 3000, 'US', 6);
   const economic = route(calculate(candidate), 'MX_TEMP_ECONOMIC_SOLVENCY');
@@ -98,15 +98,15 @@ test('economic-solvency route rejects income below the threshold without a growt
   assert.ok(economic.blockers.some((message) => message.includes('финансовое основание')));
 });
 
-test('economic-solvency route becomes conditional when the applicant plans to reach the threshold', () => {
+test('economic-solvency route remains unsuitable below the threshold even when the applicant plans to raise income', () => {
   const candidate = profile();
   candidate.income.primary = income('REMOTE_EMPLOYMENT', 3000, 'US', 3);
   candidate.route_specific_answers = {
     MX_TEMP_ECONOMIC_SOLVENCY: { ready_to_raise_income: true },
   };
   const economic = route(calculate(candidate), 'MX_TEMP_ECONOMIC_SOLVENCY');
-  assert.equal(economic.routeStatus, 'SUITABLE_WITH_CONDITIONS');
-  assert.ok(economic.actions.some((action) => action.includes('6 месяцев')));
+  assert.equal(economic.routeStatus, 'UNSUITABLE');
+  assert.ok(economic.blockers.some((message) => message.includes('финансовое основание')));
 });
 
 test('savings satisfy the official alternative after a twelve-month average-balance history', () => {
@@ -143,7 +143,7 @@ test('passive-only profile does not invent readiness for a local job', () => {
   assert.equal(job.routeStatus, 'UNSUITABLE');
 });
 
-test('family members add a separate family-unity condition', () => {
+test('family documents remain filing requirements and do not lower route status', () => {
   const candidate = profile({
     family: {
       adults_count: 2,
@@ -154,9 +154,10 @@ test('family members add a separate family-unity condition', () => {
     },
   });
   const economic = route(calculate(candidate), 'MX_TEMP_ECONOMIC_SOLVENCY');
-  assert.equal(economic.routeStatus, 'SUITABLE_WITH_CONDITIONS');
-  assert.ok(economic.conditions.some((condition) => condition.includes('семейное единство')));
-  assert.ok(economic.conditions.some((condition) => condition.includes('фактический союз')));
+  assert.equal(economic.routeStatus, 'SUITABLE');
+  assert.equal(economic.conditions.length, 0);
+  assert.ok(economic.initialPermitRequirements.some((action) => action.includes('апостиль')));
+  assert.ok(economic.initialPermitRequirements.some((action) => action.includes('concubinato')));
 });
 
 test('Mexico exposes researched cities, schools, pets, LGBT data and long-term texts', () => {
@@ -204,8 +205,8 @@ test('public matcher loads Mexico, its adapter, its flag and researched cities',
     readFile(new URL('../matcher/app.js', import.meta.url), 'utf8'),
     readFile(new URL('../pilot/fx-context.js', import.meta.url), 'utf8'),
   ]);
-  assert.match(app, /mexico-adapter\.js\?v=7\.0\.1/);
-  assert.match(app, /mexico-research-v3\.0\.json\?v=7\.0\.1/);
+  assert.match(app, /mexico-adapter\.js\?v=7\.0\.2/);
+  assert.match(app, /mexico-research-v3\.0\.json\?v=7\.0\.2/);
   assert.match(app, /countryId === 'MX' \? '🇲🇽'/);
   assert.match(app, /\['AR', 'PY', 'PT', 'MX', 'BR'\]\.includes\(countryId\)/);
   assert.match(fx, /quotes=EUR,ARS,MXN,BRL/);

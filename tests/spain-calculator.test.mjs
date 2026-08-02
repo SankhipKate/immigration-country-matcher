@@ -87,10 +87,11 @@ test('currency conversion prevents comparing USD directly with an EUR threshold'
   assert.ok(dnv.blockers.some((message) => message.includes('требование маршрута')));
 });
 
-test('Russian bank statements keep DNV conditional and show the document review', () => {
+test('Russian bank statements remain a filing requirement and do not lower DNV status', () => {
   const result = calculate({ plannedBasis: 'REMOTE_EMPLOYEE', monthlyIncomeUsd: 4000, bankCountry: 'RU' });
-  assert.equal(result.bestRoute.routeStatus, 'SUITABLE_WITH_CONDITIONS');
-  assert.ok(result.bestRoute.review.some((item) => item.includes('выписок российского банка')));
+  assert.equal(result.bestRoute.routeStatus, 'SUITABLE');
+  assert.ok(result.bestRoute.initialPermitRequirements.some((item) => item.includes('выписок российского банка')));
+  assert.equal(result.bestRoute.review.some((item) => item.includes('выписок российского банка')), false);
 });
 
 test('Spanish primary income source is evaluated separately for DNV', () => {

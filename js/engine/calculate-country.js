@@ -1,6 +1,6 @@
-import { selectBestRoute } from './select-best-route.js?v=7.0.1';
-import { COUNTRY_GROUP_LABELS_RU } from './status-contract.js?v=7.0.1';
-import { convertMoney } from './currency.js?v=7.0.1';
+import { selectBestRoute } from './select-best-route.js?v=7.0.2';
+import { COUNTRY_GROUP_LABELS_RU } from './status-contract.js?v=7.0.2';
+import { convertMoney } from './currency.js?v=7.0.2';
 
 const EUROZONE_COUNTRY_IDS = new Set([
   'AT', 'BE', 'BG', 'HR', 'CY', 'EE', 'FI', 'FR', 'DE', 'GR', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PT', 'SK', 'SI', 'ES',

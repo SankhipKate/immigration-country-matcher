@@ -19,7 +19,6 @@ const incomeSource = (prefix, owner, answers) => ({
   monthly_total: money(answers[`${prefix}TotalAmount`] ?? answers[`${prefix}Amount`], answers[`${prefix}Currency`]),
   monthly_provable: money(answers[`${prefix}Amount`], answers[`${prefix}Currency`]),
   evidence_level: answers[`${prefix}Evidence`],
-  history_months: null,
   stability: null,
   continues_after_move: null,
   contract_remaining_months: null,

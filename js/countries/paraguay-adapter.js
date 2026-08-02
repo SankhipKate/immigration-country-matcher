@@ -1,5 +1,5 @@
-import { convertMoney } from '../engine/currency.js?v=7.0.1';
-import { ROUTE_STATUSES, STATUS_LABELS_RU } from '../engine/status-contract.js?v=7.0.1';
+import { convertMoney } from '../engine/currency.js?v=7.0.2';
+import { ROUTE_STATUSES, STATUS_LABELS_RU } from '../engine/status-contract.js?v=7.0.2';
 
 const PUBLIC_ROUTE_IDS = new Set(['PY_TEMPORARY', 'PY_PERMANENT_AFTER_TEMP']);
 const CITIZENSHIP_GOALS = new Set(['CITIZENSHIP_DESIRED', 'CITIZENSHIP_MAIN_GOAL', 'CITIZENSHIP_REQUIRED']);

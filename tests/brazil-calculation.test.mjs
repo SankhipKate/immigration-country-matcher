@@ -8,7 +8,7 @@ const brazil = JSON.parse(await readFile(new URL('../data/brazil-research-v3.0.j
 
 const context = {
   calculation_date: '2026-08-01T08:00:00Z',
-  engine_version: '7.0.1',
+  engine_version: '7.0.2',
   fx: {
     base_currency: 'USD',
     rates: { EUR: 0.87, ARS: 1350, MXN: 18, BRL: 5.5, RUB: 80, UYU: 40 },
@@ -115,6 +115,18 @@ test('digital nomad accepts the 18,000 USD savings alternative', () => {
   assert.ok(nomad.checks.some(({ code }) => code === 'brazil_nomad_savings_met'));
 });
 
+test('digital nomad is unsuitable below both financial alternatives even when readiness flags are true', () => {
+  const input = profile({
+    income: { primary: incomeSource({ amount: 1000 }), savings: { amount: 5000, currency: 'USD' } },
+    route_specific_answers: {
+      BR_DIGITAL_NOMAD: { ready_to_raise_income: true, ready_to_build_savings: true },
+    },
+  });
+  const nomad = route(calculate(input), 'BR_DIGITAL_NOMAD');
+  assert.equal(nomad.routeStatus, 'UNSUITABLE');
+  assert.ok(nomad.checks.some(({ code }) => code === 'brazil_nomad_finance_below_threshold'));
+});
+
 test('digital nomad does not treat a Brazilian employer as a foreign remote basis', () => {
   const input = profile({ income: { primary: incomeSource({ sourceCountry: 'BR', amount: 2500 }) } });
   const nomad = route(calculate(input), 'BR_DIGITAL_NOMAD');
@@ -122,11 +134,12 @@ test('digital nomad does not treat a Brazilian employer as a foreign remote basi
   assert.equal(nomad.incomeTypeFit, 'DOES_NOT_MEET');
 });
 
-test('Russian bank documents keep an otherwise qualifying nomad route conditional', () => {
+test('Russian bank documents are a filing requirement and do not lower an otherwise qualifying nomad route', () => {
   const input = profile({ income: { primary: incomeSource({ bankCountry: 'RU', amount: 2000 }) } });
   const nomad = route(calculate(input), 'BR_DIGITAL_NOMAD');
-  assert.equal(nomad.routeStatus, 'SUITABLE_WITH_CONDITIONS');
-  assert.ok(nomad.actions.some((action) => /консульств/i.test(action)));
+  assert.equal(nomad.routeStatus, 'SUITABLE');
+  assert.ok(nomad.initialPermitRequirements.some((item) => /консульств/i.test(item)));
+  assert.equal(nomad.actions.some((item) => /консульств/i.test(item)), false);
 });
 
 test('retirement route requires a pension basis and accepts regular top-up income', () => {
@@ -140,6 +153,18 @@ test('retirement route requires a pension basis and accepts regular top-up incom
   const retirement = route(calculate(input), 'BR_RETIREMENT');
   assert.equal(retirement.routeStatus, 'SUITABLE');
   assert.equal(retirement.incomeUsd, 2100);
+});
+
+test('retirement route is unsuitable below 2,000 USD even when the profile says income may be added', () => {
+  const input = profile({
+    income: { primary: incomeSource({ type: 'PENSION', sourceCountry: 'RU', amount: 1500 }) },
+    route_specific_answers: {
+      BR_RETIREMENT: { ready_to_raise_income: true, ready_to_add_regular_income: true },
+    },
+  });
+  const retirement = route(calculate(input), 'BR_RETIREMENT');
+  assert.equal(retirement.routeStatus, 'UNSUITABLE');
+  assert.ok(retirement.checks.some(({ code }) => code === 'brazil_retirement_income_below'));
 });
 
 test('local employment becomes suitable with a confirmed Brazilian offer', () => {
@@ -156,6 +181,16 @@ test('Brazil graduate work requires a qualifying Brazilian degree and in-country
   });
   const graduate = route(calculate(input), 'BR_BRAZIL_GRADUATE_WORK');
   assert.equal(graduate.routeStatus, 'SUITABLE');
+});
+
+test('Brazil graduate work remains suitable outside Brazil and lists the trip as an application requirement', () => {
+  const input = profile({
+    residence: { current_country: 'RU', current_status: 'CITIZENSHIP' },
+    route_specific_answers: { BR_BRAZIL_GRADUATE_WORK: { brazil_degree_completed: true } },
+  });
+  const graduate = route(calculate(input), 'BR_BRAZIL_GRADUATE_WORK');
+  assert.equal(graduate.routeStatus, 'SUITABLE');
+  assert.ok(graduate.initialPermitRequirements.some((item) => /въехать|MigranteWeb/i.test(item)));
 });
 
 test('study route is suitable with admission and confirmed financial means', () => {
@@ -177,6 +212,15 @@ test('same-sex family link can use the family-reunification route', () => {
   assert.equal(family.routeStatus, 'SUITABLE');
   assert.equal(result.lgbt.enabled, true);
   assert.match(result.lgbt.rows[0][1], /однопол/i);
+});
+
+test('Brazil keeps an existing unregistered partnership suitable and lists união estável evidence as a filing requirement', () => {
+  const input = profile({
+    family: { adults_count: 2, partner_included: true, relationship_type: 'UNREGISTERED_PARTNER' },
+  });
+  const nomad = route(calculate(input), 'BR_DIGITAL_NOMAD');
+  assert.equal(nomad.routeStatus, 'SUITABLE');
+  assert.ok(nomad.initialPermitRequirements.some((item) => /união estável|совместной жизни/i.test(item)));
 });
 
 test('productive investment uses 500,000 BRL as the automatic standard threshold', () => {
@@ -242,7 +286,7 @@ test('missing or stale BRL rate creates a typed country error', () => {
   assert.equal(staleResult.errors[0].code, 'CALCULATION_CONTEXT_INCOMPLETE');
 });
 
-test('public matcher loads Brazil data, adapter, flag, cities and version 7.0.1', async () => {
+test('public matcher loads Brazil data, adapter, flag, cities and version 7.0.2', async () => {
   const [app, html, fx, packageJson, readme] = await Promise.all([
     readFile(new URL('../matcher/app.js', import.meta.url), 'utf8'),
     readFile(new URL('../matcher/index.html', import.meta.url), 'utf8'),
@@ -251,13 +295,13 @@ test('public matcher loads Brazil data, adapter, flag, cities and version 7.0.1'
     readFile(new URL('../README.md', import.meta.url), 'utf8'),
   ]);
   assert.match(app, /brazilAdapter/);
-  assert.match(app, /brazil-research-v3\.0\.json\?v=7\.0\.1/);
+  assert.match(app, /brazil-research-v3\.0\.json\?v=7\.0\.2/);
   assert.match(app, /countryId === 'BR' \? '🇧🇷'/);
   assert.match(app, /\['AR', 'PY', 'PT', 'MX', 'BR'\]\.includes\(countryId\)/);
   assert.match(fx, /quotes=EUR,ARS,MXN,BRL/);
   assert.match(fx, /\['EUR', 'ARS', 'MXN', 'BRL'\]/);
-  assert.equal(packageJson.version, '7.0.1');
-  assert.match(html, /версия 7\.0\.1/);
+  assert.equal(packageJson.version, '7.0.2');
+  assert.match(html, /версия 7\.0\.2/);
   assert.match(readme, /Бразилии/);
   assert.match(readme, /семи стран/i);
 });

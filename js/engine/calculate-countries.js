@@ -1,4 +1,4 @@
-import { calculateCountry } from './calculate-country.js?v=7.0.1';
+import { calculateCountry } from './calculate-country.js?v=7.0.2';
 
 export function calculateCountries(profile, countryPackages, calculationContext, adapterResolver) {
   if (!Array.isArray(countryPackages)) throw new TypeError('countryPackages must be an array');

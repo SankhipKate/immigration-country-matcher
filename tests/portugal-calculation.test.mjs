@@ -11,7 +11,7 @@ const portugal = JSON.parse(await readFile(new URL('../data/portugal-research-v3
 const spain = JSON.parse(await readFile(new URL('../data/spain-research-v2.2.json', import.meta.url), 'utf8'));
 const context = {
   calculation_date: '2026-07-30T12:00:00Z',
-  engine_version: '7.0.1',
+  engine_version: '7.0.2',
   fx: {
     base_currency: 'USD',
     rates: { EUR: 0.87, RUB: 80 },
@@ -105,8 +105,20 @@ test('D8 is suitable for documented foreign remote income above the JSON thresho
   assert.match(d8.incomeGuidance, /последние 3 месяца/i);
 });
 
-test('D8 is unsuitable below the mandatory threshold without a plan to increase income', () => {
-  const d8 = route(calculate(withPrimary('REMOTE_EMPLOYMENT', 3200)), 'PT_D8_REMOTE');
+test('D8 ignores income history length and keeps the route suitable above the threshold', () => {
+  const candidate = withPrimary('REMOTE_EMPLOYMENT', 4200);
+  candidate.income.primary.history_months = 1;
+  const d8 = route(calculate(candidate), 'PT_D8_REMOTE');
+  assert.equal(d8.routeStatus, 'SUITABLE');
+  assert.equal(d8.checks.some(({ code }) => /history/i.test(code)), false);
+  assert.ok(d8.initialPermitRequirements.some((item) => /последние 3 месяца/i.test(item)));
+});
+
+test('D8 is unsuitable below the mandatory threshold even when the profile says income may increase', () => {
+  const candidate = withPrimary('REMOTE_EMPLOYMENT', 3200, 'US', {
+    route_specific_answers: { PT_D8_REMOTE: { ready_to_raise_income: true } },
+  });
+  const d8 = route(calculate(candidate), 'PT_D8_REMOTE');
   assert.equal(d8.routeStatus, 'UNSUITABLE');
   assert.ok(d8.blockers.some((message) => message.includes('обязательный порог')));
   assert.ok(d8.actions.some((action) => action.includes('3680 EUR')));
@@ -177,9 +189,40 @@ test('partner and child change the D7 and D2 family thresholds from the package 
   const pension = calculate(withPrimary('PENSION', 1500, 'RU', { family }));
   const contractor = calculate(withPrimary('CONTRACTOR', 1700, 'US', { family }));
   assert.equal(route(pension, 'PT_D7_OWN_INCOME').thresholdEur, 1656);
-  assert.equal(route(pension, 'PT_D7_OWN_INCOME').routeStatus, 'SUITABLE_WITH_CONDITIONS');
+  assert.equal(route(pension, 'PT_D7_OWN_INCOME').routeStatus, 'UNSUITABLE');
   assert.equal(route(contractor, 'PT_D2_INDEPENDENT').thresholdEur, 1656);
   assert.equal(route(contractor, 'PT_D2_INDEPENDENT').routeStatus, 'SUITABLE');
+});
+
+test('D2 is unsuitable when existing independent income is below the family threshold', () => {
+  const family = {
+    adults_count: 2,
+    partner_included: true,
+    relationship_type: 'MARRIAGE',
+    children: [{ age_years: 8 }],
+    school_needed: false,
+  };
+  const candidate = withPrimary('CONTRACTOR', 1500, 'US', {
+    family,
+    route_specific_answers: { PT_D2_INDEPENDENT: { ready_to_raise_income: true } },
+  });
+  const d2 = route(calculate(candidate), 'PT_D2_INDEPENDENT');
+  assert.equal(d2.routeStatus, 'UNSUITABLE');
+  assert.equal(d2.incomeFit, 'DOES_NOT_MEET');
+});
+
+test('Portugal keeps an existing unregistered partnership suitable and lists evidence as a filing requirement', () => {
+  const family = {
+    adults_count: 2,
+    partner_included: true,
+    relationship_type: 'UNREGISTERED_PARTNER',
+    children: [],
+    school_needed: false,
+  };
+  const d8 = route(calculate(withPrimary('REMOTE_EMPLOYMENT', 5000, 'US', { family })), 'PT_D8_REMOTE');
+  assert.equal(d8.routeStatus, 'SUITABLE');
+  assert.ok(d8.initialPermitRequirements.some((item) => /совместной жизни|фактический союз/i.test(item)));
+  assert.equal(d8.actions.some((item) => /совместной жизни|фактический союз/i.test(item)), false);
 });
 
 test('Portugal result uses researched cities, family, long-term, work, schools, pets, LGBT, sources, and route-scoped reviews', () => {
@@ -230,8 +273,8 @@ test('public matcher loads Portugal without adding Portugal-specific questionnai
     readFile(new URL('../matcher/app.js', import.meta.url), 'utf8'),
     readFile(new URL('../matcher/index.html', import.meta.url), 'utf8'),
   ]);
-  assert.match(app, /portugal-adapter\.js\?v=7\.0\.1/);
-  assert.match(app, /portugal-research-v3\.0\.json\?v=7\.0\.1/);
+  assert.match(app, /portugal-adapter\.js\?v=7\.0\.2/);
+  assert.match(app, /portugal-research-v3\.0\.json\?v=7\.0\.2/);
   assert.match(app, /countryId === 'PT' \? '🇵🇹'/);
   assert.match(app, /\['AR', 'PY', 'PT', 'MX', 'BR'\]\.includes\(countryId\)/);
   assert.equal(/<[^>]+(?:id|name)="[^"]*(?:portugal|pt_d8|pt_d7|pt_d2|pt_d1)[^"]*"/i.test(html), false);

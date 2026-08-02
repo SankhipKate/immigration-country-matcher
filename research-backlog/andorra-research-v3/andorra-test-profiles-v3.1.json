@@ -1,0 +1,76 @@
+{
+  "country": "AD",
+  "research_package": "andorra-research-v3.0.json",
+  "profiles": [
+    {
+      "id": "AD_T1",
+      "description_ru": "Удаленный сотрудник, работа полностью онлайн",
+      "expected": {
+        "AD_DN": "SUITABLE_WITH_CONDITIONS"
+      }
+    },
+    {
+      "id": "AD_T2",
+      "description_ru": "Владелец готов создать андоррскую компанию, доля >34%, депозит €50 000",
+      "expected": {
+        "AD_SELF": "SUITABLE_WITH_CONDITIONS"
+      }
+    },
+    {
+      "id": "AD_T3",
+      "description_ru": "Есть местный андоррский контракт и квота",
+      "expected": {
+        "AD_EMP": "SUITABLE"
+      }
+    },
+    {
+      "id": "AD_T4",
+      "description_ru": "Только иностранная удаленная работа, местный контракт не рассматривает",
+      "expected": {
+        "AD_EMP": "UNSUITABLE"
+      }
+    },
+    {
+      "id": "AD_T5",
+      "description_ru": "Однополая зарегистрированная пара",
+      "expected": {
+        "family_legal_recognition": "MEETS"
+      }
+    },
+    {
+      "id": "AD_T6",
+      "description_ru": "Пассивный заявитель один, доход €60 000 в год",
+      "expected": {
+        "AD_PASSIVE": "SUITABLE"
+      }
+    },
+    {
+      "id": "AD_T7",
+      "description_ru": "Пассивный заявитель с партнёром, общий подтверждаемый доход ниже €75 296,16",
+      "expected": {
+        "AD_PASSIVE": "UNSUITABLE"
+      }
+    },
+    {
+      "id": "AD_T8",
+      "description_ru": "Собака с микрочипом, действующей прививкой, прошло 21+ дней, есть сертификат",
+      "expected": {
+        "pet_import": "MEETS"
+      }
+    },
+    {
+      "id": "AD_T9",
+      "description_ru": "Гражданство обязательно и пользователь обязан сохранить гражданство РФ",
+      "expected": {
+        "citizenship_goal": "DOES_NOT_MEET"
+      }
+    },
+    {
+      "id": "AD_T10",
+      "description_ru": "Ребёнку нужна государственная школа",
+      "expected": {
+        "school_access": "MEETS"
+      }
+    }
+  ]
+}
