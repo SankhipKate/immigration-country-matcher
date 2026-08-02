@@ -1,6 +1,6 @@
-import { CalculationContextError } from '../engine/calculate-country.js?v=7.0.1';
-import { convertMoney } from '../engine/currency.js?v=7.0.1';
-import { ROUTE_STATUSES, STATUS_LABELS_RU } from '../engine/status-contract.js?v=7.0.1';
+import { CalculationContextError } from '../engine/calculate-country.js?v=7.0.2';
+import { convertMoney } from '../engine/currency.js?v=7.0.2';
+import { ROUTE_STATUSES, STATUS_LABELS_RU } from '../engine/status-contract.js?v=7.0.2';
 
 const REMOTE_INCOME_TYPES = new Set([
   'REMOTE_EMPLOYMENT',
@@ -30,6 +30,7 @@ const outcome = (status, code, message, options = {}) => ({
   message,
   condition: options.condition ?? null,
   action: options.action ?? null,
+  requirement: options.requirement ?? null,
 });
 
 const strictest = (checks) => checks.some(({ status }) => status === ROUTE_STATUSES.UNSUITABLE)
@@ -174,21 +175,10 @@ function familyThreshold(route, profile) {
     + (profile.children?.length || 0) * base * childRate;
 }
 
-function incomeHistoryMonths(route) {
-  const match = String(route.income_formula || '').match(/(\d+)\s+месяц/iu);
-  const months = Number(match?.[1]);
-  if (!Number.isInteger(months) || months <= 0) {
-    throw new TypeError(`Portugal route ${route.route_id} has no parseable income history`);
-  }
-  return months;
-}
-
 function d8IncomeEvaluation(route, profile) {
   const income = matchingIncome(profile.applicantSources, REMOTE_INCOME_TYPES);
   const thresholdEur = Number(route.income_threshold_amount);
-  const historyMonths = incomeHistoryMonths(route);
   const checks = [];
-  const answers = routeAnswers(profile, route.route_id);
 
   if (income.sources.length === 0) {
     checks.push(outcome(
@@ -213,55 +203,26 @@ function d8IncomeEvaluation(route, profile) {
         { action: 'Подтвердить работодателя или заказчиков с местом нахождения за пределами Португалии.' },
       ));
     } else if (eligibleAmount < thresholdEur) {
-      const message = `Подтверждаемый подходящий доход составляет около ${Math.round(eligibleAmount)} EUR в месяц, обязательный порог D8 — ${Math.round(thresholdEur)} EUR.`;
-      if (affirmative(answers.ready_to_raise_income)) {
-        checks.push(outcome(
-          ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS,
-          'd8_income_increase_required',
-          message,
-          {
-            condition: `Увеличить подтверждаемый доход минимум до ${Math.ceil(thresholdEur)} EUR и сформировать историю за ${historyMonths} месяца.`,
-            action: `Увеличить подтверждаемый доход минимум до ${Math.ceil(thresholdEur)} EUR в месяц и подтвердить среднее значение за период из правил маршрута.`,
-          },
-        ));
-      } else {
-        checks.push(outcome(
-          ROUTE_STATUSES.UNSUITABLE,
-          'd8_income_below_threshold',
-          message,
-          { action: `Увеличить подтверждаемый доход минимум до ${Math.ceil(thresholdEur)} EUR в месяц и сформировать требуемую историю.` },
-        ));
-      }
+      checks.push(outcome(
+        ROUTE_STATUSES.UNSUITABLE,
+        'd8_income_below_threshold',
+        `Подтверждаемый подходящий доход составляет около ${Math.round(eligibleAmount)} EUR в месяц, обязательный порог D8 — ${Math.round(thresholdEur)} EUR.`,
+        { action: `Маршрут недоступен при доходе ниже ${Math.ceil(thresholdEur)} EUR в месяц.` },
+      ));
     } else {
       if (unknownForeign.length > 0) {
         checks.push(outcome(
-          ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS,
-          'd8_foreign_clients_confirmation_required',
-          'Для самостоятельных услуг без единой страны источника нужно подтвердить, что заказчики находятся за пределами Португалии.',
-          {
-            condition: 'Подтвердить зарубежное местонахождение заказчиков.',
-            action: 'Подготовить договоры, предложения, счета или доказательства услуг зарубежным заказчикам.',
-          },
-        ));
-      }
-      const shortHistory = income.sources.some((source) =>
-        source.history_months != null && Number(source.history_months) < historyMonths);
-      if (shortHistory) {
-        checks.push(outcome(
-          ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS,
-          'd8_income_history_required',
-          `Пакет требует средний доход за период, указанный в формуле маршрута: ${route.income_formula}.`,
-          {
-            condition: `Сформировать полную историю подходящего дохода за ${historyMonths} месяца.`,
-            action: `Дождаться ${historyMonths} полных месяцев поступлений и подготовить документы за этот период.`,
-          },
+          ROUTE_STATUSES.SUITABLE,
+          'd8_foreign_clients_document_requirement',
+          'Маршрут доступен; для подачи нужно документально показать, что заказчики находятся за пределами Португалии.',
+          { requirement: 'Подготовить договоры, предложения, счета или другие доказательства услуг зарубежным заказчикам.' },
         ));
       }
       if (checks.length === 0) {
         checks.push(outcome(
           ROUTE_STATUSES.SUITABLE,
           'd8_income_confirmed',
-          `Зарубежный удалённый доход достигает порога ${Math.round(thresholdEur)} EUR; требование к истории берётся из формулы маршрута.`,
+          `Зарубежный удалённый доход достигает порога ${Math.round(thresholdEur)} EUR. Период выписок из правил маршрута показывается как требование к подаче и не влияет на статус.`,
         ));
       }
     }
@@ -284,7 +245,6 @@ function d7IncomeEvaluation(route, profile) {
   const income = matchingIncome(profile.allSources, D7_INCOME_TYPES);
   const thresholdEur = familyThreshold(route, profile);
   const checks = [];
-  const answers = routeAnswers(profile, route.route_id);
 
   if (income.sources.length === 0) {
     checks.push(outcome(
@@ -294,25 +254,12 @@ function d7IncomeEvaluation(route, profile) {
       { action: 'Указать подтверждаемую пенсию или регулярный пассивный доход отдельным источником.' },
     ));
   } else if (income.amountEur < thresholdEur) {
-    const message = `Подтверждаемый подходящий доход составляет около ${Math.round(income.amountEur)} EUR, семейная формула D7 требует ${Math.round(thresholdEur)} EUR в месяц.`;
-    if (explicitlyNegative(answers.ready_to_raise_income)) {
-      checks.push(outcome(
-        ROUTE_STATUSES.UNSUITABLE,
-        'd7_income_below_threshold',
-        message,
-        { action: `Увеличить подтверждаемый доход минимум до ${Math.ceil(thresholdEur)} EUR в месяц.` },
-      ));
-    } else {
-      checks.push(outcome(
-        ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS,
-        'd7_income_increase_required',
-        message,
-        {
-          condition: `Увеличить и документально подтвердить подходящий доход минимум до ${Math.ceil(thresholdEur)} EUR в месяц.`,
-          action: `Увеличить пенсию или пассивный доход минимум до ${Math.ceil(thresholdEur)} EUR в месяц и обеспечить средства на срок из правил маршрута.`,
-        },
-      ));
-    }
+    checks.push(outcome(
+      ROUTE_STATUSES.UNSUITABLE,
+      'd7_income_below_threshold',
+      `Подтверждаемый подходящий доход составляет около ${Math.round(income.amountEur)} EUR, семейная формула D7 требует ${Math.round(thresholdEur)} EUR в месяц.`,
+      { action: `Маршрут недоступен при доходе ниже ${Math.ceil(thresholdEur)} EUR в месяц.` },
+    ));
   } else {
     checks.push(outcome(
       ROUTE_STATUSES.SUITABLE,
@@ -350,13 +297,10 @@ function d2IncomeEvaluation(route, profile) {
   if (hasExistingBasis) {
     if (income.amountEur < thresholdEur) {
       checks.push(outcome(
-        ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS,
-        'd2_subsistence_increase_required',
+        ROUTE_STATUSES.UNSUITABLE,
+        'd2_subsistence_below_threshold',
         `Самостоятельное основание есть, но подтверждаемые средства около ${Math.round(income.amountEur)} EUR ниже семейной формулы ${Math.round(thresholdEur)} EUR.`,
-        {
-          condition: `Подтвердить средства минимум ${Math.ceil(thresholdEur)} EUR в месяц и сохранить реальное договорное или предпринимательское основание.`,
-          action: `Увеличить подтверждаемые средства минимум до ${Math.ceil(thresholdEur)} EUR в месяц.`,
-        },
+        { action: `Маршрут недоступен при подтверждаемых средствах ниже ${Math.ceil(thresholdEur)} EUR в месяц.` },
       ));
     } else {
       checks.push(outcome(
@@ -392,7 +336,7 @@ function d2IncomeEvaluation(route, profile) {
     incomeOriginal: income.original,
     incomeConversion: income.conversion,
     incomeTypeFit: hasExistingBasis ? 'MEETS' : activeWork || readyToCreate ? 'UNKNOWN' : 'DOES_NOT_MEET',
-    incomeFit: hasExistingBasis ? (income.amountEur >= thresholdEur ? 'MEETS' : 'UNKNOWN') : 'NOT_APPLICABLE',
+    incomeFit: hasExistingBasis ? (income.amountEur >= thresholdEur ? 'MEETS' : 'DOES_NOT_MEET') : 'NOT_APPLICABLE',
     basisMissing: !hasExistingBasis,
   };
 }
@@ -463,13 +407,10 @@ function applicationEvaluation(route) {
 function familyEvaluation(route, profile) {
   if (profile.partnerIncluded && profile.relationshipType === 'UNREGISTERED_PARTNER') {
     return [outcome(
-      ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS,
-      'portugal_partnership_evidence_required',
-      'Для фактического партнёрства потребуется документально подтвердить отношения по правилам воссоединения.',
-      {
-        condition: 'Подготовить доказательства признанного фактического союза.',
-        action: 'Собрать документы о совместной жизни и проверить форму подтверждения отношений для AIMA.',
-      },
+      ROUTE_STATUSES.SUITABLE,
+      'portugal_partnership_document_requirement',
+      'Фактическое партнёрство допускается; существующие отношения нужно подтвердить документами по правилам воссоединения.',
+      { requirement: 'Собрать документы о совместной жизни и подтвердить признанный фактический союз для AIMA.' },
     )];
   }
   return [outcome(
@@ -489,11 +430,12 @@ function goalEvaluation() {
   )];
 }
 
-function initialPermitRequirements(route) {
-  return [
+function initialPermitRequirements(route, checks) {
+  return [...new Set([
     route.basis_ru,
     route.income_rule_ru,
-  ].filter(Boolean);
+    ...checks.map((check) => check.requirement).filter(Boolean),
+  ].filter(Boolean))];
 }
 
 function evaluateRoute(route, indexes, profile) {
@@ -559,7 +501,7 @@ function evaluateRoute(route, indexes, profile) {
     clientMissing: conditions,
     review: [...new Set(route.open_questions || [])],
     actions,
-    initialPermitRequirements: initialPermitRequirements(route),
+    initialPermitRequirements: initialPermitRequirements(route, checks),
     incomeGuidance: route.income_rule_ru || null,
     applicationGuidance,
     followUpQuestions: [],

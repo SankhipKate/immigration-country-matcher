@@ -1,7 +1,7 @@
-import { CalculationContextError } from '../engine/calculate-country.js?v=7.0.1';
-import { convertMoney } from '../engine/currency.js?v=7.0.1';
-import { ROUTE_STATUSES, STATUS_LABELS_RU, resolveStatusConflict } from '../engine/status-contract.js?v=7.0.1';
-import { INCOME_TYPE_BY_SCENARIO, ROUTE_RULES } from './spain-rules.js?v=7.0.1';
+import { CalculationContextError } from '../engine/calculate-country.js?v=7.0.2';
+import { convertMoney } from '../engine/currency.js?v=7.0.2';
+import { ROUTE_STATUSES, STATUS_LABELS_RU, resolveStatusConflict } from '../engine/status-contract.js?v=7.0.2';
+import { INCOME_TYPE_BY_SCENARIO, ROUTE_RULES } from './spain-rules.js?v=7.0.2';
 
 const CHECK_KINDS = Object.freeze({
   CLIENT_INPUT: 'CLIENT_INPUT',
@@ -263,7 +263,7 @@ function incomeEvaluation(route, indexes, profile, context) {
   if (rule.socialSecurityReview) {
     if (profile.incomeSourceCountry === 'ES') checks.push(outcome(ROUTE_STATUSES.UNSUITABLE, 'dnv_foreign_income_source_required', 'Для DNV основная работа или профессиональная деятельность должна быть связана преимущественно с работодателем или заказчиками за пределами Испании.'));
     else checks.push(outcome(ROUTE_STATUSES.SUITABLE, 'dnv_foreign_income_source', 'Для DNV потребуется подтвердить иностранного работодателя или заказчиков и допустимую долю деятельности в Испании.'));
-    if (profile.bankCountry === 'RU') checks.push(reviewCondition('russian_bank_documents_open', 'Приём выписок российского банка требует подтверждения.'));
+    if (profile.bankCountry === 'RU') checks.push(outcome(ROUTE_STATUSES.SUITABLE, 'russian_bank_documents_required', 'Для подачи потребуется подтвердить приемлемость, перевод и доступность выписок российского банка. Это требование к документам и оно не понижает статус маршрута.'));
     const contractor = ['CONTRACTOR', 'FREELANCE_OR_SELF_EMPLOYED'].includes(profile.plannedBasis);
     const message = contractor
       ? 'Для DNV самостоятельному специалисту потребуется регистрация в испанской системе социального страхования (RETA).'
@@ -398,7 +398,7 @@ function evaluateRoute(route, indexes, profile, context) {
   const blockerActions = checks.filter((check) => check.status === ROUTE_STATUSES.UNSUITABLE).map(actionFor);
   const enablingActions = checks.filter((check) => check.code === 'separate_route_basis_required').map((check) => check.message);
   const actions = [...blockerActions, ...enablingActions].filter(Boolean);
-  const requirementCodes = new Set(['dnv_foreign_income_source', 'social_security_required', 'means_declaration_required', 'future_uruguayan_family_link_required']);
+  const requirementCodes = new Set(['dnv_foreign_income_source', 'social_security_required', 'means_declaration_required', 'future_uruguayan_family_link_required', 'russian_bank_documents_required']);
   const initialPermitRequirements = checks.filter((check) => requirementCodes.has(check.code)).map((check) => check.message);
   const applicationGuidance = {
     ES_DNV: 'Из Испании податься можно, если вы находитесь там законно. При подаче через консульство вне России нужен резидентский статус в стране подачи; альтернативно можно подаваться из России.',

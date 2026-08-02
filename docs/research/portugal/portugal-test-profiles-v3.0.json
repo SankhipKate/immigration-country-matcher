@@ -6,41 +6,38 @@
   "profiles": [
     {
       "profile_id": "PT_D8_SUITABLE",
-      "description_ru": "Зарубежная удалённая работа, доход €4 200 в среднем за 3 месяца.",
+      "description_ru": "Зарубежная удалённая работа и подтверждаемый ежемесячный доход €4 200.",
       "inputs": {
         "citizenship": "RU",
         "remote_foreign_work": true,
-        "average_income_eur_3m": 4200,
-        "income_history_months": 3
+        "average_income_eur_3m": 4200
       },
       "expected": {
         "PT_D8_REMOTE": "SUITABLE",
         "PT_D3_HIGHLY_QUALIFIED": "NOT_PUBLISHED"
       },
-      "reason_ru": "Основание D8 существует, доход выше €3 680 и есть требуемая история."
+      "reason_ru": "Основание D8 существует, доход выше €3 680; выписки за требуемый период относятся к подаче."
     },
     {
-      "profile_id": "PT_D8_CONDITIONAL_RAISE_INCOME",
-      "description_ru": "Доход €3 200, пользователь готов увеличить его до порога.",
+      "profile_id": "PT_D8_SUITABLE_AT_THRESHOLD",
+      "description_ru": "Зарубежная удалённая работа и подтверждаемый доход точно на пороге €3 680.",
       "inputs": {
         "citizenship": "RU",
         "remote_foreign_work": true,
-        "average_income_eur_3m": 3200,
-        "ready_to_raise_income": true
+        "average_income_eur_3m": 3680
       },
       "expected": {
-        "PT_D8_REMOTE": "SUITABLE_WITH_CONDITIONS"
+        "PT_D8_REMOTE": "SUITABLE"
       },
-      "reason_ru": "Требуется содержательное увеличение дохода до €3 680 и новая трёхмесячная история."
+      "reason_ru": "Доход равен обязательному порогу; история выписок не является отдельным критерием статуса."
     },
     {
       "profile_id": "PT_D8_UNSUITABLE",
-      "description_ru": "Доход ниже порога, увеличение не планируется.",
+      "description_ru": "Подтверждаемый доход ниже обязательного порога.",
       "inputs": {
         "citizenship": "RU",
         "remote_foreign_work": true,
-        "average_income_eur_3m": 2500,
-        "ready_to_raise_income": false
+        "average_income_eur_3m": 2500
       },
       "expected": {
         "PT_D8_REMOTE": "UNSUITABLE"
@@ -62,19 +59,18 @@
       "reason_ru": "Квалифицируемый доход выше €920 и обеспечен на требуемый период."
     },
     {
-      "profile_id": "PT_D7_CONDITIONAL_FAMILY",
-      "description_ru": "Пара с доходом €1 200 при формуле €1 380, готовая увеличить доход.",
+      "profile_id": "PT_D7_UNSUITABLE_FAMILY_BELOW_THRESHOLD",
+      "description_ru": "Пара с подтверждаемым доходом €1 200 при семейном пороге €1 380.",
       "inputs": {
         "citizenship": "RU",
         "income_type": "PENSION",
         "monthly_qualifying_income_eur": 1200,
-        "adults": 2,
-        "ready_to_raise_income": true
+        "adults": 2
       },
       "expected": {
-        "PT_D7_OWN_INCOME": "SUITABLE_WITH_CONDITIONS"
+        "PT_D7_OWN_INCOME": "UNSUITABLE"
       },
-      "reason_ru": "Для двух взрослых требуется €920 + €460 = €1 380."
+      "reason_ru": "Для двух взрослых требуется €920 + €460 = €1 380; доход ниже порога всегда даёт UNSUITABLE."
     },
     {
       "profile_id": "PT_D7_UNSUITABLE_ACTIVE_ONLY",

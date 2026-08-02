@@ -1,0 +1,460 @@
+{
+  "schema_version": "3.1-research",
+  "country": {
+    "country_id": "AD",
+    "name_ru": "Андорра",
+    "name_en": "Andorra",
+    "checked_at": "2026-08-01",
+    "next_review": "2026-11-01"
+  },
+  "ready_for_publication": false,
+  "completeness_percent": 96,
+  "routes": [
+    {
+      "route_id": "AD_DN",
+      "official_name": "Residència per a nòmada digital",
+      "name_ru": "Цифровой кочевник",
+      "type": "DIGITAL_NOMAD",
+      "available_to_russian_citizen": "Да",
+      "publishable": true,
+      "hidden_reason_ru": null,
+      "source_ids": [
+        "AD_SRC_DN",
+        "AD_SRC_NORM"
+      ],
+      "initial_validity_years": 2,
+      "renewal_sequence_years": [
+        2,
+        3,
+        10
+      ],
+      "minimum_presence_days_per_year": 90,
+      "quota_required": true,
+      "economy_ministry_approval_required": true,
+      "housing_required": true,
+      "health_insurance_required": true,
+      "sufficient_means_required": true,
+      "minimum_income_numeric": null,
+      "minimum_income_note_ru": "Официальная страница требует достаточные средства, но не публикует универсальную числовую формулу.",
+      "local_work_rights": "NOT_CONFIRMED",
+      "route_status_default": "PRELIMINARY_SUITABLE"
+    },
+    {
+      "route_id": "AD_SELF",
+      "official_name": "Residència i treball per compte propi",
+      "name_ru": "Самозанятость / собственная компания",
+      "type": "SELF_EMPLOYMENT",
+      "available_to_russian_citizen": "Да",
+      "publishable": true,
+      "hidden_reason_ru": null,
+      "source_ids": [
+        "AD_SRC_SELF",
+        "AD_SRC_NORM"
+      ],
+      "initial_validity_years": 1,
+      "renewal_sequence_years": [
+        2,
+        2,
+        2,
+        10
+      ],
+      "quota_required": true,
+      "permanent_effective_residence_required": true,
+      "company_share_min_percent": 34.01,
+      "management_role_required": true,
+      "business_active_months_before_finalization": 3,
+      "afa_deposit_eur": 50000,
+      "route_status_default": "SUITABLE_WITH_CONDITIONS"
+    },
+    {
+      "route_id": "AD_EMP",
+      "official_name": "Residència i treball",
+      "name_ru": "Работа у андоррского работодателя",
+      "type": "LOCAL_EMPLOYMENT",
+      "available_to_russian_citizen": "Да, при наличии квоты и контракта",
+      "publishable": true,
+      "hidden_reason_ru": null,
+      "source_ids": [
+        "AD_SRC_EMP",
+        "AD_SRC_NORM"
+      ],
+      "initial_validity_years": 1,
+      "renewal_sequence_years": [
+        2,
+        2,
+        2,
+        10
+      ],
+      "quota_required": true,
+      "andorran_employer_contract_required": true,
+      "permanent_effective_residence_required": true,
+      "route_status_default": "SUITABLE_WITH_CONDITIONS"
+    },
+    {
+      "route_id": "AD_INTL_PRO",
+      "official_name": "Residència per a professionals amb projecció internacional",
+      "name_ru": "Международный профессионал",
+      "type": "PASSIVE_SPECIAL",
+      "available_to_russian_citizen": "Да",
+      "publishable": true,
+      "hidden_reason_ru": null,
+      "source_ids": [
+        "AD_SRC_PASSIVE"
+      ],
+      "initial_validity_years": 2,
+      "renewal_sequence_years": [
+        2,
+        3,
+        10
+      ],
+      "minimum_presence_days_per_year": 90,
+      "services_outside_andorra_min_percent": 85,
+      "max_employees": 1,
+      "afa_deposit_main_eur": 47500,
+      "afa_deposit_dependent_eur": 9500,
+      "route_status_default": "PRELIMINARY_SUITABLE"
+    },
+    {
+      "route_id": "AD_ENT",
+      "official_name": "Residència per a participants en programes per a emprenedors",
+      "name_ru": "Предпринимательская программа",
+      "type": "ENTREPRENEUR",
+      "available_to_russian_citizen": "Да",
+      "publishable": true,
+      "hidden_reason_ru": null,
+      "source_ids": [
+        "AD_SRC_ENT"
+      ],
+      "initial_validity_years": 1,
+      "renewal_sequence_years": [
+        1
+      ],
+      "minimum_presence_days_per_year": 90,
+      "official_entrepreneur_program_approval_required": true,
+      "route_status_default": "SUITABLE_WITH_CONDITIONS"
+    },
+    {
+      "route_id": "AD_PASSIVE",
+      "official_name": "Residència sense treball",
+      "name_ru": "Пассивная/инвестиционная резиденция",
+      "type": "PASSIVE_RESIDENCE",
+      "available_to_russian_citizen": "Да",
+      "publishable": true,
+      "hidden_reason_ru": null,
+      "source_ids": [
+        "AD_SRC_PASSIVE",
+        "AD_SRC_NORM"
+      ],
+      "initial_validity_years": 2,
+      "renewal_sequence_years": [
+        2,
+        3,
+        10
+      ],
+      "minimum_presence_days_per_year": 90,
+      "annual_income_formula": "300% annual minimum wage for main applicant + 100% per dependent",
+      "minimum_wage_monthly_eur_2026_07_01": 1568.67,
+      "calculated_main_income_min_eur_year": 56472.12,
+      "calculated_dependent_increment_eur_year": 18824.04,
+      "initial_government_fee_eur": 3000,
+      "dependent_initial_fee_eur": 1000,
+      "renewal_fee_eur": 500,
+      "route_status_default": "PRELIMINARY_SUITABLE"
+    }
+  ],
+  "cities": [
+    {
+      "city_id": "AD_CAPITAL",
+      "name_ru": "Андорра-ла-Велья / Эскальдес",
+      "budget_single_usd": [
+        2400,
+        2800
+      ],
+      "budget_couple_usd": [
+        3200,
+        3800
+      ],
+      "budget_family_1_child_usd": [
+        4300,
+        5100
+      ],
+      "confidence": "MEDIUM"
+    },
+    {
+      "city_id": "AD_ENCAMP",
+      "name_ru": "Энкам",
+      "budget_single_usd": [
+        2000,
+        2400
+      ],
+      "budget_couple_usd": [
+        2800,
+        3300
+      ],
+      "budget_family_1_child_usd": [
+        3900,
+        4600
+      ],
+      "confidence": "LOW"
+    },
+    {
+      "city_id": "AD_SANT_JULIA",
+      "name_ru": "Сант-Жулия-де-Лория",
+      "budget_single_usd": [
+        2100,
+        2500
+      ],
+      "budget_couple_usd": [
+        2900,
+        3400
+      ],
+      "budget_family_1_child_usd": [
+        4000,
+        4700
+      ],
+      "confidence": "LOW"
+    }
+  ],
+  "lgbt": {
+    "same_sex_marriage": true,
+    "adoption_equal": true,
+    "family_reunification": true,
+    "safety_category_ru": "высокая юридическая безопасность"
+  },
+  "schools": {
+    "public_access_for_resident_children": true,
+    "systems": [
+      "андоррская",
+      "испанская",
+      "французская"
+    ]
+  },
+  "pets": {
+    "publishable": true,
+    "species_standard_rules": [
+      "собаки",
+      "кошки",
+      "хорьки"
+    ],
+    "non_commercial_limit": 5,
+    "microchip_or_pre_2011_legible_tattoo_required": true,
+    "rabies_vaccination_required": true,
+    "first_rabies_wait_days": 21,
+    "eu_listed_origin_document": "pet passport",
+    "other_origin_document": "official animal health certificate",
+    "quarantine_standard_requirement": false,
+    "breed_restrictions_confirmed": false,
+    "other_or_wild_animals_individual_authorization": true
+  },
+  "open_questions": [
+    "AD_DYNAMIC_BANKING",
+    "AD_CITY_MARKET"
+  ],
+  "sources": [
+    {
+      "source_id": "AD_SRC_IMM_CATALOG",
+      "source_type": "OFFICIAL",
+      "authority": "Govern d’Andorra",
+      "title_ru": "Каталог разрешений на проживание и работу",
+      "url": "https://www.govern.ad/ca/tematiques/immigracio/residencia-i-treball",
+      "supports_ru": "Перечень действующих маршрутов, включая работу, самозанятость, digital nomad и предпринимательскую программу",
+      "checked_at": "2026-07-31",
+      "confidence": "HIGH"
+    },
+    {
+      "source_id": "AD_SRC_DN",
+      "source_type": "OFFICIAL",
+      "authority": "Govern d’Andorra",
+      "title_ru": "D.3 Residència per a nòmada digital",
+      "url": "https://www.govern.ad/ca/tematiques/immigracio/residencia/residencia-per-a-nomada-digital",
+      "supports_ru": "Digital nomad: 90 дней проживания в год; 2+2+3 года, затем 10-летние продления; требуется одобрение Минэкономики",
+      "checked_at": "2026-07-31",
+      "confidence": "HIGH"
+    },
+    {
+      "source_id": "AD_SRC_ENT",
+      "source_type": "OFFICIAL",
+      "authority": "Govern d’Andorra",
+      "title_ru": "D.4 Residència per a participants en programes per a emprenedors",
+      "url": "https://www.govern.ad/ca/tematiques/immigracio/residencia/residencia-per-a-participants-en-programes-per-a-emprenedors",
+      "supports_ru": "Предпринимательская программа: участие в утвержденной программе, 90 дней в год, разрешение на 1 год с годовыми продлениями",
+      "checked_at": "2026-07-31",
+      "confidence": "HIGH"
+    },
+    {
+      "source_id": "AD_SRC_SELF",
+      "source_type": "OFFICIAL",
+      "authority": "Govern d’Andorra",
+      "title_ru": "J.1 Residència i treball per compte propi",
+      "url": "https://www.govern.ad/ca/tematiques/immigracio/residencia-i-treball/residencia-i-treball-per-compte-propi-autoritzacio-inicial",
+      "supports_ru": "Самозанятость/собственная компания; квота; постоянное проживание; для компании доля >34%, управление, активный бизнес и депозит €50 000",
+      "checked_at": "2026-07-31",
+      "confidence": "HIGH"
+    },
+    {
+      "source_id": "AD_SRC_EMP",
+      "source_type": "OFFICIAL",
+      "authority": "Govern d’Andorra",
+      "title_ru": "A.1 Residència i treball",
+      "url": "https://www.govern.ad/ca/tematiques/immigracio/residencia-i-treball/residencia-i-treball-autoritzacio-inicial",
+      "supports_ru": "Местный трудовой маршрут; первое разрешение 1 год, затем три продления по 2 года",
+      "checked_at": "2026-07-31",
+      "confidence": "HIGH"
+    },
+    {
+      "source_id": "AD_SRC_PASSIVE",
+      "source_type": "OFFICIAL",
+      "authority": "Govern d’Andorra",
+      "title_ru": "D.1 Residència sense treball",
+      "url": "https://www.govern.ad/ca/tematiques/immigracio/residencia/residencia-sense-treball-autoritzacio-inicial",
+      "supports_ru": "Пассивная резиденция и специальные категории; для международного профессионала 85% услуг за пределами Андорры, 90 дней в год, депозит €47 500 + €9 500 на иждивенца",
+      "checked_at": "2026-07-31",
+      "confidence": "HIGH"
+    },
+    {
+      "source_id": "AD_SRC_FAMILY",
+      "source_type": "OFFICIAL",
+      "authority": "Govern d’Andorra",
+      "title_ru": "B.1 Reagrupament familiar",
+      "url": "https://www.govern.ad/ca/tematiques/immigracio/residencia/residencia-per-raons-de-reagrupament-autoritzacio-inicial",
+      "supports_ru": "Супруг/зарегистрированный партнер, дети, зависимые родители 65+; срок связан со статусом спонсора",
+      "checked_at": "2026-07-31",
+      "confidence": "HIGH"
+    },
+    {
+      "source_id": "AD_SRC_CIT",
+      "source_type": "OFFICIAL",
+      "authority": "Govern d’Andorra",
+      "title_ru": "Adquisició de la nacionalitat andorrana",
+      "url": "https://www.govern.ad/ca/ministeris-i-secretaries-d-estat/ministeri-de-justicia-i-interior/nacionalitat/adquisicio-de-la-nacionalitat-andorrana",
+      "supports_ru": "Натурализация после 20 лет проживания; последние 5 лет — эффективное проживание; отказ от прежних гражданств; по браку с гражданином Андорры — 5 лет проживания",
+      "checked_at": "2026-07-31",
+      "confidence": "HIGH"
+    },
+    {
+      "source_id": "AD_SRC_SCHOOL",
+      "source_type": "OFFICIAL",
+      "authority": "Govern d’Andorra",
+      "title_ru": "Requisits per a l’escolarització",
+      "url": "https://www.govern.ad/ca/tematiques/educacio-formacio-investigacio-i-divulgacio-del-coneixement/estudiar-a-andorra/recursos-i-dades-d-interes",
+      "supports_ru": "Доступ к публичной школе после регистрации в коммуне и иммиграционном регистре; выбор андоррской, испанской или французской системы",
+      "checked_at": "2026-07-31",
+      "confidence": "HIGH"
+    },
+    {
+      "source_id": "AD_SRC_LGBT",
+      "source_type": "OFFICIAL",
+      "authority": "Govern d’Andorra",
+      "title_ru": "Оценка Совета Европы: права LGTBI",
+      "url": "https://www.govern.ad/ca/w/andorra-avanca-en-la-lluita-contra-el-racisme-i-la-intolerancia-segons-publica-en-l-informe-d-avaluacio-el-consell-d-europa-1",
+      "supports_ru": "Однополый гражданский брак и усыновление на равных условиях; правовая защита трансгендерных людей",
+      "checked_at": "2026-07-31",
+      "confidence": "HIGH"
+    },
+    {
+      "source_id": "AD_SRC_MARRIAGE",
+      "source_type": "OFFICIAL",
+      "authority": "Govern d’Andorra",
+      "title_ru": "Matrimonis civils",
+      "url": "https://www.govern.ad/ca/tematiques/registre-civil/matrimonis-civils",
+      "supports_ru": "Регистрация и признание гражданских браков, включая заключенные за рубежом",
+      "checked_at": "2026-07-31",
+      "confidence": "HIGH"
+    },
+    {
+      "source_id": "AD_SRC_COST",
+      "source_type": "SECONDARY",
+      "authority": "Numbeo",
+      "title_ru": "Cost of Living in Andorra la Vella",
+      "url": "https://www.numbeo.com/cost-of-living/in/Andorra-La-Vella",
+      "supports_ru": "Ориентиры расходов и аренды; 1-bedroom в центре около €1 260",
+      "checked_at": "2026-07-31",
+      "confidence": "MEDIUM"
+    },
+    {
+      "source_id": "AD_SRC_COST_COUNTRY",
+      "source_type": "SECONDARY",
+      "authority": "Numbeo",
+      "title_ru": "Cost of Living in Andorra",
+      "url": "https://www.numbeo.com/cost-of-living/country_result.jsp?country=Andorra",
+      "supports_ru": "Ориентир расходов семьи из 4 человек без аренды около €2 837",
+      "checked_at": "2026-07-31",
+      "confidence": "MEDIUM"
+    },
+    {
+      "source_id": "AD_SRC_NORM",
+      "source_type": "OFFICIAL",
+      "authority": "Govern d’Andorra",
+      "title_ru": "Normativa i legislació d’immigració",
+      "url": "https://www.govern.ad/ca/tematiques/immigracio/normativa-i-legislacio",
+      "supports_ru": "Актуальные квоты и нормативные акты 2025–2026",
+      "checked_at": "2026-07-31",
+      "confidence": "HIGH"
+    }
+  ],
+  "publication_notes_ru": "Повторная проверка 2026-08-02 по обязательному стандарту качества v3.2 выявила блокеры публикации. См. andorra-publication-checklist-v3.2.md. Исследовательская полнота 96% не равна разрешению на публикацию.",
+  "family": {
+    "eligible_relatives": [
+      "супруг",
+      "член зарегистрированного стабильного союза",
+      "несовершеннолетние дети",
+      "совершеннолетние зависимые дети под опекой",
+      "зависимые родители 65+ или пенсионеры",
+      "иные лица под законной опекой в предусмотренных законом случаях"
+    ],
+    "sponsor_income_formula": {
+      "sponsor_percent_minimum_wage": 100,
+      "adult_dependent_percent_minimum_wage": 100,
+      "minor_dependent_percent_minimum_wage": 70
+    },
+    "family_residence_work_access": "Residence by family reunification is accepted for employment-service registration; exact automatic work entitlement depends on permit subtype.",
+    "same_sex_family_equal_recognition": true
+  },
+  "entry_and_application": {
+    "andorra_schengen_member": false,
+    "access_via": [
+      "Испания",
+      "Франция"
+    ],
+    "russian_citizen_practical_requirement_ru": "Для въезда через Шенген необходим действующий документ, позволяющий повторный или многократный въезд, если гражданину требуется шенгенская виза.",
+    "foreign_documents_apostille_or_legalization_required": true
+  },
+  "tax": {
+    "tax_residence_primary_day_test": 183,
+    "worldwide_income_taxed_for_residents": true,
+    "personal_income_tax_max_rate_percent": 10,
+    "tax_note_ru": "Налоговый результат зависит от вида дохода, вычетов и соглашения об избежании двойного налогообложения."
+  },
+  "healthcare": {
+    "active_residents_system": "CASS social health insurance",
+    "typical_primary_care_patient_share_percent": 25,
+    "typical_outpatient_reimbursement_percent": 75,
+    "typical_hospital_reimbursement_percent": 90,
+    "passive_and_digital_routes_private_insurance_required": true
+  },
+  "minimum_wage": {
+    "effective_date": "2026-07-01",
+    "hourly_eur": 9.05,
+    "monthly_eur": 1568.67
+  },
+  "fees": {
+    "residence_and_work_initial_eur": 190.96,
+    "self_employment_initial_eur": 190.96,
+    "family_reunification_initial_eur": 22.61,
+    "passive_residence_initial_eur": 3000,
+    "passive_dependent_initial_eur": 1000,
+    "passive_residence_renewal_eur": 500
+  },
+  "remaining_uncertainty": [
+    {
+      "id": "AD_DYNAMIC_BANKING",
+      "weight_percent": 2,
+      "reason_ru": "Практика открытия счетов гражданам РФ меняется по банкам и комплаенсу; требуется проверка перед подачей."
+    },
+    {
+      "id": "AD_CITY_MARKET",
+      "weight_percent": 2,
+      "reason_ru": "Аренда и фактические расходы быстро меняются; городские бюджеты остаются диапазонами."
+    }
+  ]
+}

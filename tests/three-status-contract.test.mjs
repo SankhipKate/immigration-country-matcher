@@ -23,7 +23,7 @@ const [spain, uruguay, argentina, paraguay, portugal] = await Promise.all([
 
 const context = {
   calculation_date: '2026-07-24T12:00:00Z',
-  engine_version: '7.0.1',
+  engine_version: '7.0.2',
   fx: {
     base_currency: 'USD',
     rates: { EUR: 0.87, ARS: 1000, RUB: 80, UYU: 40 },

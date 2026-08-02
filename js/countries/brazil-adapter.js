@@ -1,6 +1,6 @@
-import { CalculationContextError } from '../engine/calculate-country.js?v=7.0.1';
-import { convertMoney } from '../engine/currency.js?v=7.0.1';
-import { ROUTE_STATUSES, STATUS_LABELS_RU } from '../engine/status-contract.js?v=7.0.1';
+import { CalculationContextError } from '../engine/calculate-country.js?v=7.0.2';
+import { convertMoney } from '../engine/currency.js?v=7.0.2';
+import { ROUTE_STATUSES, STATUS_LABELS_RU } from '../engine/status-contract.js?v=7.0.2';
 
 const PUBLIC_ROUTE_IDS = new Set([
   'BR_DIGITAL_NOMAD',
@@ -44,6 +44,7 @@ const outcome = (status, code, message, options = {}) => ({
   message,
   condition: options.condition ?? null,
   action: options.action ?? null,
+  requirement: options.requirement ?? null,
 });
 
 const strictest = (checks) => checks.some(({ status }) => status === ROUTE_STATUSES.UNSUITABLE)
@@ -197,16 +198,13 @@ function applicantIncome(profile, allowedTypes, { foreignOnly = false } = {}) {
   };
 }
 
-function russianBankCondition(sources) {
+function russianBankRequirement(sources) {
   return sources.some((source) => source.bank_country === 'RU')
     ? [outcome(
-      ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS,
-      'brazil_russian_bank_document_review',
-      'Финансовый порог выполнен, но выбранное консульство должно подтвердить формат российских банковских документов и доступность средств.',
-      {
-        condition: 'Подтвердить в выбранном консульстве формат российских выписок и переводимость средств.',
-        action: 'До подачи проверить требования конкретного консульства к переводу, заверению и подтверждению доступа к средствам.',
-      },
+      ROUTE_STATUSES.SUITABLE,
+      'brazil_russian_bank_document_requirement',
+      'Финансовый порог выполнен; требования выбранного консульства к российским банковским документам относятся к подготовке подачи.',
+      { requirement: 'До подачи проверить требования конкретного консульства к переводу, заверению и подтверждению доступа к средствам по российским выпискам.' },
     )]
     : [];
 }
@@ -218,7 +216,6 @@ function digitalNomadEvaluation(route, profile, context) {
   const savingsUsd = Number(answers.savings_usd ?? answers.available_savings_usd ?? profile.savingsUsd ?? 0);
   const incomeMeets = income.amountUsd >= threshold.amount;
   const savingsMeets = savingsUsd >= 18000;
-  const readyToImprove = affirmative(answers.ready_to_raise_income ?? answers.ready_to_build_savings);
   const checks = [];
 
   if (income.accepted.length > 0 && income.eligible.length === 0 && income.local.length > 0 && !savingsMeets) {
@@ -236,23 +233,20 @@ function digitalNomadEvaluation(route, profile, context) {
         ? 'Подтверждаемый зарубежный удалённый доход достигает 1 500 USD в месяц.'
         : 'Подтверждены доступные банковские средства не менее 18 000 USD.',
     ));
-    checks.push(...russianBankCondition(income.eligible));
-  } else if (income.eligible.length > 0 || readyToImprove) {
+    checks.push(...russianBankRequirement(income.eligible));
+  } else if (income.eligible.length > 0) {
     checks.push(outcome(
-      ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS,
-      'brazil_nomad_finance_to_complete',
-      'Зарубежное удалённое основание есть, но нужно довести подтверждаемый доход до 1 500 USD в месяц либо накопления до 18 000 USD.',
-      {
-        condition: 'Выполнить одну из двух финансовых альтернатив маршрута.',
-        action: 'Подтвердить доход не менее 1 500 USD в месяц или доступные средства не менее 18 000 USD.',
-      },
+      ROUTE_STATUSES.UNSUITABLE,
+      'brazil_nomad_finance_below_threshold',
+      'Зарубежное удалённое основание есть, но подтверждаемый доход ниже 1 500 USD в месяц и доступные средства ниже 18 000 USD.',
+      { action: 'Маршрут недоступен, пока не выполнена хотя бы одна из двух финансовых альтернатив.' },
     ));
   } else {
     checks.push(outcome(
       ROUTE_STATUSES.UNSUITABLE,
       'brazil_nomad_basis_absent',
-      'Нет подтверждаемой зарубежной удалённой деятельности и не указана финансовая альтернатива по накоплениям.',
-      { action: 'Сформировать реальное зарубежное удалённое основание либо выбрать другой маршрут.' },
+      'Нет подтверждаемой зарубежной удалённой деятельности и не выполнена финансовая альтернатива по накоплениям.',
+      { action: 'Выбрать маршрут, соответствующий текущему основанию и подтверждаемым средствам.' },
     ));
   }
 
@@ -275,8 +269,6 @@ function retirementEvaluation(route, profile, context) {
   const topUpSources = profile.applicantSources.filter((source) => REGULAR_TOP_UP_TYPES.has(source.type));
   const amountUsd = topUpSources.reduce((sum, source) => sum + Number(source.provableConverted || 0), 0);
   const threshold = thresholdInUsd(route, context);
-  const answers = routeAnswers(profile, route.route_id);
-  const readyToImprove = affirmative(answers.ready_to_raise_income ?? answers.ready_to_add_regular_income);
   const checks = [];
 
   if (pensionSources.length === 0) {
@@ -292,17 +284,7 @@ function retirementEvaluation(route, profile, context) {
       'brazil_retirement_income_met',
       'Пенсия и допустимые регулярные доходы достигают 2 000 USD в месяц.',
     ));
-    checks.push(...russianBankCondition(topUpSources));
-  } else if (readyToImprove) {
-    checks.push(outcome(
-      ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS,
-      'brazil_retirement_income_to_complete',
-      'Пенсионное основание есть, но общую подтверждаемую сумму нужно довести до 2 000 USD в месяц.',
-      {
-        condition: 'Дополнить пенсию допустимым регулярным доходом и организовать регулярный перевод средств.',
-        action: 'Подтвердить пенсию и другие регулярные доходы общей суммой не менее 2 000 USD в месяц.',
-      },
-    ));
+    checks.push(...russianBankRequirement(topUpSources));
   } else {
     checks.push(outcome(
       ROUTE_STATUSES.UNSUITABLE,
@@ -381,13 +363,10 @@ function graduateWorkEvaluation(route, profile) {
   if (degreeCompleted && !inBrazil) {
     return {
       checks: [outcome(
-        ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS,
-        'brazil_graduate_return_required',
-        'Образовательное основание подтверждено, но этот маршрут предназначен для подачи из Бразилии.',
-        {
-          condition: 'Законно находиться в Бразилии на момент подачи.',
-          action: 'Проверить допустимый въезд и подать заявление через MigranteWeb из Бразилии.',
-        },
+        ROUTE_STATUSES.SUITABLE,
+        'brazil_graduate_in_country_application_requirement',
+        'Образовательное основание подтверждено; подать заявление нужно после законного въезда в Бразилию.',
+        { requirement: 'Законно въехать в Бразилию и подать заявление через MigranteWeb из страны.' },
       )],
       basisMissing: false,
       scenarioAffinity: 1,
@@ -710,13 +689,10 @@ function applicationEvaluation(route, profile) {
   }
   if (insideOnly && !profile.currentCountry?.includes('BR')) {
     return [outcome(
-      ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS,
-      'brazil_inside_application_trip_required',
-      'Этот маршрут подаётся из Бразилии; текущее местонахождение не блокирует его, но потребуется законно приехать и подать заявление внутри страны.',
-      {
-        condition: 'Законно находиться в Бразилии на момент подачи.',
-        action: 'Организовать законный въезд и подачу через MigranteWeb из Бразилии.',
-      },
+      ROUTE_STATUSES.SUITABLE,
+      'brazil_inside_application_requirement',
+      'Этот маршрут подаётся из Бразилии; текущее местонахождение не блокирует доступность маршрута.',
+      { requirement: 'Организовать законный въезд и подать заявление через MigranteWeb из Бразилии.' },
     )];
   }
   return [outcome(ROUTE_STATUSES.SUITABLE, 'brazil_application_available', 'Выбран хотя бы один допустимый способ подачи.')];
@@ -724,15 +700,12 @@ function applicationEvaluation(route, profile) {
 
 function familyEvaluation(route, profile) {
   const checks = [outcome(ROUTE_STATUSES.SUITABLE, 'brazil_family_general_available', 'Семейное воссоединение предусмотрено для супруга, партнёра, детей и других установленных родственников.')];
-  if (profile.partnerIncluded && profile.relationshipType === 'UNREGISTERED_PARTNERSHIP') {
+  if (profile.partnerIncluded && profile.relationshipType === 'UNREGISTERED_PARTNER') {
     checks.push(outcome(
-      ROUTE_STATUSES.SUITABLE_WITH_CONDITIONS,
-      'brazil_unregistered_union_evidence',
-      'Незарегистрированный партнёр может использовать união estável, но устойчивый союз нужно доказать документами.',
-      {
-        condition: 'Подтвердить устойчивый семейный союз.',
-        action: 'Подготовить документы о совместной жизни, общих обязательствах и иных признаках união estável.',
-      },
+      ROUTE_STATUSES.SUITABLE,
+      'brazil_unregistered_union_document_requirement',
+      'Незарегистрированный партнёр может использовать união estável; существующий устойчивый союз подтверждается документами.',
+      { requirement: 'Подготовить документы о совместной жизни, общих обязательствах и иных признаках união estável.' },
     ));
   }
   return checks;
@@ -843,7 +816,7 @@ function evaluateRoute(route, indexes, profile, context) {
     clientMissing: conditions,
     review: route.open_questions || [],
     actions,
-    initialPermitRequirements: [],
+    initialPermitRequirements: [...new Set(checks.map((check) => check.requirement).filter(Boolean))],
     incomeGuidance: basis.incomeGuidance || route.income_rule_ru || null,
     applicationGuidance,
     followUpQuestions: followUpsFor(route.route_id),

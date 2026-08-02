@@ -18,10 +18,10 @@ test('visible matcher version matches package version', async () => {
     readFile(new URL('../pilot/fx-context.js', import.meta.url), 'utf8'),
   ]);
   assert.match(matcherHtml, new RegExp(`версия ${packageJson.version.replaceAll('.', '\\.')}`));
-  assert.equal(packageJson.version, '7.0.1');
-  assert.match(matcherHtml, /<span class="product-name">COUNTRY MATCHER<\/span><span class="product-version">7\.0\.1<\/span>/);
+  assert.equal(packageJson.version, '7.0.2');
+  assert.match(matcherHtml, /<span class="product-name">COUNTRY MATCHER<\/span><span class="product-version">7\.0\.2<\/span>/);
   assert.match(matcherHtml, /<title>COUNTRY MATCHER<\/title>/);
-  assert.match(fxContext, /engine_version: '7\.0\.1'/);
+  assert.match(fxContext, /engine_version: '7\.0\.2'/);
 });
 
 const answers = (overrides = {}) => ({

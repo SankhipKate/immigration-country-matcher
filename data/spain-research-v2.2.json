@@ -1231,8 +1231,16 @@
       "general_safety": "UNKNOWN",
       "lgbt_safety": "Высокая национальная юридическая защита; городская практика не подтверждена.",
       "healthcare_access": "Доступна городская медицинская инфраструктура провинциальной столицы.",
-      "school_types": ["PUBLIC", "PRIVATE_LOCAL", "INTERNATIONAL"],
-      "school_languages": ["es", "ca", "en"],
+      "school_types": [
+        "PUBLIC",
+        "PRIVATE_LOCAL",
+        "INTERNATIONAL"
+      ],
+      "school_languages": [
+        "es",
+        "ca",
+        "en"
+      ],
       "international_school_available": "YES",
       "internet_quality": "UNKNOWN",
       "international_airport_access": "LIMITED",
@@ -1314,7 +1322,10 @@
       "city_id": "ES_CASTELLON",
       "name": "Государственные школы Кастельона",
       "school_type": "PUBLIC",
-      "languages": ["es", "va"],
+      "languages": [
+        "es",
+        "va"
+      ],
       "age_range": "6–16 compulsory basic education",
       "annual_tuition_local": 0,
       "currency": "EUR",
