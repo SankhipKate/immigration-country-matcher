@@ -1,0 +1,55 @@
+name: Deploy legacy redirects
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Verify redirect pages
+        run: |
+          test -f .legacy-redirects/matcher/index.html
+          test -f .legacy-redirects/countrymatcher/matcher/index.html
+          test -f .legacy-redirects/landing/index.html
+          test ! -e .legacy-redirects/index.html
+          test ! -e .legacy-redirects/pilot/index.html
+
+          grep -Fq \
+            'https://sankhipkate.github.io/countrymatcher/' \
+            .legacy-redirects/matcher/index.html
+
+          grep -Fq \
+            'https://sankhipkate.github.io/countrymatcher/' \
+            .legacy-redirects/countrymatcher/matcher/index.html
+
+          grep -Fq \
+            'https://sankhipkate.github.io/countrymatcher/landing/' \
+            .legacy-redirects/landing/index.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: .legacy-redirects
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
